@@ -1,0 +1,6 @@
+{
+  "name": "SecundariaIA",
+  "description": "Tutor inteligente con IA para estudiantes de secundaria en Nicaragua con currículo adaptativo y estilos de aprendizaje",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

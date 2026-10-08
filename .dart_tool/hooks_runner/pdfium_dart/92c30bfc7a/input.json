@@ -1,0 +1,29 @@
+{
+  "assets": {},
+  "config": {
+    "build_asset_types": [
+      "code_assets/code"
+    ],
+    "extensions": {
+      "code_assets": {
+        "android": {
+          "target_ndk_api": 24
+        },
+        "c_compiler": {
+          "ar": "C:\\Users\\Administrador\\AppData\\Local\\Android\\sdk\\ndk\\28.2.13676358\\toolchains\\llvm\\prebuilt\\windows-x86_64\\bin\\llvm-ar.exe",
+          "cc": "C:\\Users\\Administrador\\AppData\\Local\\Android\\sdk\\ndk\\28.2.13676358\\toolchains\\llvm\\prebuilt\\windows-x86_64\\bin\\clang.exe",
+          "ld": "C:\\Users\\Administrador\\AppData\\Local\\Android\\sdk\\ndk\\28.2.13676358\\toolchains\\llvm\\prebuilt\\windows-x86_64\\bin\\ld.lld.exe"
+        },
+        "link_mode_preference": "dynamic",
+        "target_architecture": "arm64",
+        "target_os": "android"
+      }
+    },
+    "linking_enabled": true
+  },
+  "out_dir_shared": "C:\\src\\SecuandariaIA\\.dart_tool\\hooks_runner\\shared\\pdfium_dart\\build\\",
+  "out_file": "C:\\src\\SecuandariaIA\\.dart_tool\\hooks_runner\\pdfium_dart\\92c30bfc7a\\output.json",
+  "package_name": "pdfium_dart",
+  "package_root": "C:\\Users\\Administrador\\AppData\\Local\\Pub\\Cache\\hosted\\pub.dev\\pdfium_dart-0.3.1\\",
+  "user_defines": {}
+}
