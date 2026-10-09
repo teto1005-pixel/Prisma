@@ -1,5 +1,5 @@
 // lib/services/motor_calculadora.dart
-
+//
 // Motor de la calculadora científica de secundaria. No depende de Flutter.
 
 import 'dart:math' as math;
@@ -253,7 +253,7 @@ Valor _raizCuadrada(Valor a) {
   return Valor.deDouble(math.sqrt(a.aDouble), deDecimal: a.deDecimal);
 }
 
-Valor _potencia(Valor a, Valor b) {
+Valor _elevar(Valor a, Valor b) {
   final dec = a.deDecimal || b.deDecimal;
   final mil = BigInt.from(1000);
 
@@ -310,13 +310,13 @@ Valor _potencia(Valor a, Valor b) {
     final rn = _raizEnteraQ(n, q);
     final rd = _raizEnteraQ(d, q);
     if (rn.pow(q) == n && rd.pow(q) == d && p.abs() <= mil) {
-      var r = _potenciaFraccion(Fraccion(rn, rd), p.toInt());
-      if (negativo && p.isOdd) r = -r;
-      return Valor.exacto(r, deDecimal: dec);
+      var exacta = _potenciaFraccion(Fraccion(rn, rd), p.toInt());
+      if (negativo && p.isOdd) exacta = -exacta;
+      return Valor.exacto(exacta, deDecimal: dec);
     }
-    var r = math.pow(f.toDouble().abs(), b.coef.toDouble()).toDouble();
-    if (negativo && p.isOdd) r = -r;
-    return Valor.deDouble(r, deDecimal: dec);
+    var aproximada = math.pow(f.toDouble().abs(), b.coef.toDouble()).toDouble();
+    if (negativo && p.isOdd) aproximada = -aproximada;
+    return Valor.deDouble(aproximada, deDecimal: dec);
   }
 
   // Cualquier otro caso: aproximado.
@@ -331,7 +331,7 @@ Valor _potencia(Valor a, Valor b) {
 Valor _raiz(Valor n, Valor x) {
   if (!n.esEntero || n.coef.n < BigInt.one) throw _errorMatematico();
   if (n.coef.n == BigInt.two) return _raizCuadrada(x);
-  return _potencia(x, Valor.entero(1) / n);
+  return _elevar(x, Valor.entero(1) / n);
 }
 
 int _enteroNoNegativo(Valor v, {int tope = 200}) {
@@ -674,7 +674,7 @@ class _Analizador {
     final base = _postfijo();
     if (_esOp('^')) {
       _i++;
-      return _potenciaValor(base, _signoPotencia());
+      return _elevar(base, _signoPotencia());
     }
     if (_esOp('raiz')) {
       _i++;
@@ -682,8 +682,6 @@ class _Analizador {
     }
     return base;
   }
-
-  Valor _potenciaValor(Valor base, Valor exponente) => _potencia2(base, exponente);
 
   Valor _postfijo() {
     var v = _primario();

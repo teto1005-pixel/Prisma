@@ -7,6 +7,7 @@ import '../data/paginas_libros.dart';
 import '../models/estructura_academica.dart';
 import '../models/perfil_estudiante.dart';
 import '../services/servicio_gemini.dart';
+import 'calculadora_cientifica.dart';
 import 'pantalla_libro.dart';
 
 /// Modelo interno para gestionar los mensajes del chat interactivo.
@@ -521,6 +522,22 @@ He adaptado mis explicaciones para ti con tu estilo preferido: **${widget.perfil
     );
   }
 
+  /// CAMBIO (calculadora): abre la calculadora; "Usar en el chat" escribe el
+  /// resultado (por ejemplo 3/4 o 2√3) al final del mensaje que se está redactando.
+  void _abrirCalculadora() {
+    mostrarCalculadora(
+      context,
+      alUsarResultado: (texto) {
+        final actual = _controladorTexto.text;
+        final nuevo = actual.isEmpty ? texto : '$actual $texto';
+        _controladorTexto.value = TextEditingValue(
+          text: nuevo,
+          selection: TextSelection.collapsed(offset: nuevo.length),
+        );
+      },
+    );
+  }
+
   Widget _construirBarraEntrada(ThemeData tema) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
@@ -531,6 +548,12 @@ He adaptado mis explicaciones para ti con tu estilo preferido: **${widget.perfil
       child: SafeArea(
         child: Row(
           children: [
+            // CAMBIO (calculadora)
+            IconButton(
+              icon: const Icon(Icons.calculate_outlined),
+              tooltip: 'Calculadora',
+              onPressed: _abrirCalculadora,
+            ),
             Expanded(
               child: TextField(
                 controller: _controladorTexto,
