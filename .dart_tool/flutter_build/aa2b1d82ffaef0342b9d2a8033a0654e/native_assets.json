@@ -1,1 +1,0 @@
-{"format-version":[1,0,0],"native-assets":{"android_arm":{"package:pdfium_dart/libpdfium":["absolute","libpdfium.so"]},"android_arm64":{"package:pdfium_dart/libpdfium":["absolute","libpdfium.so"]},"android_x64":{"package:pdfium_dart/libpdfium":["absolute","libpdfium.so"]}}}

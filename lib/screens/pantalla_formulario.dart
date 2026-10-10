@@ -92,7 +92,7 @@ class _PantallaFormularioState extends State<PantallaFormulario> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  widget.esEdicion ? 'Editar Mi Perfil' : 'Bienvenido a SecundariaIA',
+                  widget.esEdicion ? 'Editar Mi Perfil' : 'Bienvenido a Prisma',
                   style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                 ),
                 Text(

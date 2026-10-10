@@ -1,57 +1,29 @@
 import 'package:flutter/material.dart';
-import 'package:shared_preferences/shared_preferences.dart';
-
 import 'models/estructura_academica.dart';
 import 'models/perfil_estudiante.dart';
 import 'screens/pantalla_chat_tutor.dart';
 import 'screens/pantalla_formulario.dart';
+import 'screens/pantalla_formulas.dart';
 import 'screens/pantalla_grados.dart';
 import 'screens/pantalla_secciones.dart';
 import 'screens/pantalla_unidades.dart';
 
-Future<void> main() async {
-  // Asegura la conexión con el motor nativo de Flutter antes de llamadas asíncronas
+void main() {
   WidgetsFlutterBinding.ensureInitialized();
-
-  // Carga de datos guardados en el dispositivo
-  final prefs = await SharedPreferences.getInstance();
-  final bool yaConfigurado = prefs.getBool('ya_configurado') ?? false;
-  final String nombreGuardado = prefs.getString('perfil_nombre') ?? '';
-  final String gradoIdGuardado = prefs.getString('perfil_grado_id') ?? 'grado_7';
-  final int estiloIndexGuardado = prefs.getInt('perfil_estilo_index') ?? 0;
-
-  // Reconstrucción del perfil guardado o valores por defecto
-  final perfilInicial = PerfilEstudiante(
-    nombre: nombreGuardado,
-    gradoId: gradoIdGuardado,
-    estiloAprendizaje: EstiloAprendizaje.values[
-    estiloIndexGuardado.clamp(0, EstiloAprendizaje.values.length - 1)],
-  );
-
-  runApp(SecundariaIAApp(
-    yaConfigurado: yaConfigurado,
-    perfilInicial: perfilInicial,
-  ));
+  runApp(const SecundariaIAApp());
 }
 
-/// Aplicación principal SecundariaIA configurada con Material Design 3.
 class SecundariaIAApp extends StatelessWidget {
-  final bool yaConfigurado;
-  final PerfilEstudiante perfilInicial;
-
-  const SecundariaIAApp({
-    super.key,
-    required this.yaConfigurado,
-    required this.perfilInicial,
-  });
+  const SecundariaIAApp({super.key});
 
   @override
   Widget build(BuildContext context) {
+    // Paleta Deep Purple / Indigo moderno
     final colorScheme = ColorScheme.fromSeed(
-      seedColor: const Color(0xFF4338CA),
+      seedColor: const Color(0xFF4338CA), // Indigo profundo elegante
       primary: const Color(0xFF4338CA),
-      secondary: const Color(0xFF7E22CE),
-      tertiary: const Color(0xFF0EA5E9),
+      secondary: const Color(0xFF7E22CE), // Violeta profundo
+      tertiary: const Color(0xFF0EA5E9),  // Acento cian
       brightness: Brightness.light,
     );
 
@@ -69,66 +41,45 @@ class SecundariaIAApp extends StatelessWidget {
           foregroundColor: colorScheme.onSurface,
         ),
       ),
-      home: EnrutadorSecundariaIA(
-        yaConfiguradoInicial: yaConfigurado,
-        perfilInicial: perfilInicial,
-      ),
+      home: const EnrutadorSecundariaIA(),
     );
   }
 }
 
-/// Gestiona el estado de navegación y persistencia del perfil del estudiante.
+/// Gestiona el estado de navegación y persistencia en memoria del perfil del estudiante.
 class EnrutadorSecundariaIA extends StatefulWidget {
-  final bool yaConfiguradoInicial;
-  final PerfilEstudiante perfilInicial;
-
-  const EnrutadorSecundariaIA({
-    super.key,
-    required this.yaConfiguradoInicial,
-    required this.perfilInicial,
-  });
+  const EnrutadorSecundariaIA({super.key});
 
   @override
   State<EnrutadorSecundariaIA> createState() => _EnrutadorSecundariaIAState();
 }
 
 class _EnrutadorSecundariaIAState extends State<EnrutadorSecundariaIA> {
-  late PerfilEstudiante _perfil;
-  late bool _yaConfigurado;
-  bool _esModoEdicionPerfil = false;
+  PerfilEstudiante _perfil = PerfilEstudiante(
+    nombre: '',
+    gradoId: 'grado_7',
+    estiloAprendizaje: EstiloAprendizaje.pasoAPaso,
+  );
 
+  bool _esModoEdicionPerfil = false;
   Grado? _gradoSeleccionado;
   Unidad? _unidadSeleccionada;
   Seccion? _seccionSeleccionada;
 
-  @override
-  void initState() {
-    super.initState();
-    _perfil = widget.perfilInicial;
-    _yaConfigurado = widget.yaConfiguradoInicial;
-  }
-
-  /// Guarda el perfil de forma persistente en SharedPreferences.
-  Future<void> _guardarPerfilEnDisco(PerfilEstudiante nuevoPerfil) async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setString('perfil_nombre', nuevoPerfil.nombre);
-    await prefs.setString('perfil_grado_id', nuevoPerfil.gradoId);
-    await prefs.setInt('perfil_estilo_index', nuevoPerfil.estiloAprendizaje.index);
-    await prefs.setBool('ya_configurado', true);
-  }
+  // CAMBIO (pestañas): 0 = Aprender (grados), 1 = Formulario (PDF).
+  int _pestana = 0;
+  bool _formularioVisitado = false; // el PDF se abre solo la primera vez que se entra
 
   @override
   Widget build(BuildContext context) {
-    // 1. Si la app no ha sido configurada o el estudiante quiere editar su perfil
-    if (!_yaConfigurado || _esModoEdicionPerfil) {
+    // 1. Si el perfil aún no se ha completado o está en modo edición, mostrar el formulario
+    if (!_perfil.estaCompletado || _esModoEdicionPerfil) {
       return PantallaFormulario(
         perfilActual: _perfil,
         esEdicion: _esModoEdicionPerfil,
-        onGuardarPerfil: (nuevoPerfil) async {
-          await _guardarPerfilEnDisco(nuevoPerfil);
+        onGuardarPerfil: (nuevoPerfil) {
           setState(() {
             _perfil = nuevoPerfil;
-            _yaConfigurado = true;
             _esModoEdicionPerfil = false;
           });
         },
@@ -136,9 +87,7 @@ class _EnrutadorSecundariaIAState extends State<EnrutadorSecundariaIA> {
     }
 
     // 2. Si se seleccionó una sección, mostrar la pantalla de Chat con el Tutor IA
-    if (_seccionSeleccionada != null &&
-        _unidadSeleccionada != null &&
-        _gradoSeleccionado != null) {
+    if (_seccionSeleccionada != null && _unidadSeleccionada != null && _gradoSeleccionado != null) {
       return PantallaChatTutor(
         grado: _gradoSeleccionado!,
         unidad: _unidadSeleccionada!,
@@ -187,19 +136,52 @@ class _EnrutadorSecundariaIAState extends State<EnrutadorSecundariaIA> {
       );
     }
 
-    // 5. Por defecto: Mostrar la pantalla de selección de Grados Académicos
-    return PantallaGrados(
-      perfil: _perfil,
-      onSeleccionarGrado: (grado) {
-        setState(() {
-          _gradoSeleccionado = grado;
-        });
-      },
-      onEditarPerfil: () {
-        setState(() {
-          _esModoEdicionPerfil = true;
-        });
-      },
+    // 5. Por defecto: dos pestañas, "Aprender" (grados) y "Formulario" (PDF)
+    return Scaffold(
+      body: IndexedStack(
+        index: _pestana,
+        children: [
+          PantallaGrados(
+            perfil: _perfil,
+            onSeleccionarGrado: (grado) {
+              setState(() {
+                _gradoSeleccionado = grado;
+              });
+            },
+            onEditarPerfil: () {
+              setState(() {
+                _esModoEdicionPerfil = true;
+              });
+            },
+          ),
+          _formularioVisitado
+              ? PantallaFormulas(
+            key: ValueKey(_perfil.gradoId),
+            gradoInicialId: _perfil.gradoId,
+          )
+              : const SizedBox.shrink(),
+        ],
+      ),
+      bottomNavigationBar: NavigationBar(
+        selectedIndex: _pestana,
+        onDestinationSelected: (indice) {
+          setState(() {
+            _pestana = indice;
+            if (indice == 1) _formularioVisitado = true;
+          });
+        },
+        destinations: const [
+          NavigationDestination(
+            icon: Icon(Icons.school_outlined),
+            selectedIcon: Icon(Icons.school),
+            label: 'Aprender',
+          ),
+          NavigationDestination(
+            icon: Icon(Icons.functions),
+            label: 'Formulario',
+          ),
+        ],
+      ),
     );
   }
 }

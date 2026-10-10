@@ -59,7 +59,7 @@ final List<Grado> listaGrados = [
   // ---------------------------------------------------------------- 7mo
   _grado(
     id: '7mo',
-    nombre: '7mo Año',
+    nombre: '7mo Grado',
     descripcion: '1er Año de Secundaria',
     unidades: [
       ('Operaciones con Números Naturales, Fracciones y Decimales', [
@@ -100,7 +100,7 @@ final List<Grado> listaGrados = [
   // ---------------------------------------------------------------- 8vo
   _grado(
     id: '8vo',
-    nombre: '8vo Año',
+    nombre: '8vo Grado',
     descripcion: '2do Año de Secundaria',
     unidades: [
       ('Operaciones con Polinomios', [
@@ -152,7 +152,7 @@ final List<Grado> listaGrados = [
   // ---------------------------------------------------------------- 9no
   _grado(
     id: '9no',
-    nombre: '9no Año',
+    nombre: '9no Grado',
     descripcion: '3er Año de Secundaria',
     unidades: [
       ('Productos Notables y Factorización', [
@@ -195,7 +195,7 @@ final List<Grado> listaGrados = [
   // --------------------------------------------------------------- 10mo
   _grado(
     id: '10mo',
-    nombre: '10mo Año',
+    nombre: '10mo Grado',
     descripcion: '4to Año de Secundaria',
     unidades: [
       ('Conjuntos e Intervalos Numéricos', [
@@ -242,7 +242,7 @@ final List<Grado> listaGrados = [
   // --------------------------------------------------------------- 11mo
   _grado(
     id: '11mo',
-    nombre: '11mo Año',
+    nombre: '11mo Grado',
     descripcion: '5to Año de Secundaria',
     unidades: [
       ('Sucesiones', [
