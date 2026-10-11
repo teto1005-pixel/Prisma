@@ -25,9 +25,13 @@ class PantallaSecciones extends StatelessWidget {
     final tema = Theme.of(context);
 
     return Scaffold(
+      backgroundColor: tema.colorScheme.surfaceContainerLowest,
       appBar: AppBar(
+        elevation: 0,
+        backgroundColor: tema.colorScheme.primary,
+        foregroundColor: Colors.white,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back),
+          icon: const Icon(Icons.arrow_back, color: Colors.white),
           onPressed: onVolver,
         ),
         title: Column(
@@ -35,11 +39,20 @@ class PantallaSecciones extends StatelessWidget {
           children: [
             Text(
               'Unidad ${unidad.numero}: ${unidad.asignatura}',
-              style: const TextStyle(fontSize: 17, fontWeight: FontWeight.bold),
+              style: const TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.bold,
+                color: Colors.white,
+              ),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
             ),
             Text(
               '${grado.nombre} • Temas y Secciones',
-              style: TextStyle(fontSize: 12, color: tema.colorScheme.onSurfaceVariant),
+              style: TextStyle(
+                fontSize: 11,
+                color: Colors.white.withValues(alpha: 0.8),
+              ),
             ),
           ],
         ),
@@ -50,24 +63,35 @@ class PantallaSecciones extends StatelessWidget {
           child: ListView(
             padding: const EdgeInsets.all(16),
             children: [
-              // Encabezado de Unidad
+              // --- BANNER DESTACADO DE LA UNIDAD ---
               Container(
-                padding: const EdgeInsets.all(16),
+                padding: const EdgeInsets.all(20),
                 decoration: BoxDecoration(
-                  color: tema.colorScheme.primaryContainer.withOpacity(0.4),
-                  borderRadius: BorderRadius.circular(16),
+                  color: tema.colorScheme.primaryContainer.withValues(alpha: 0.4),
+                  borderRadius: BorderRadius.circular(20),
+                  border: Border.all(
+                    color: tema.colorScheme.primary.withValues(alpha: 0.15),
+                  ),
                 ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Row(
                       children: [
-                        CircleAvatar(
-                          backgroundColor: tema.colorScheme.primary,
-                          radius: 16,
-                          child: const Icon(Icons.bookmark, color: Colors.white, size: 18),
+                        Container(
+                          width: 40,
+                          height: 40,
+                          decoration: BoxDecoration(
+                            color: tema.colorScheme.primary,
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: const Icon(
+                            Icons.bookmark_rounded,
+                            color: Colors.white,
+                            size: 20,
+                          ),
                         ),
-                        const SizedBox(width: 10),
+                        const SizedBox(width: 12),
                         Expanded(
                           child: Text(
                             unidad.titulo,
@@ -75,48 +99,72 @@ class PantallaSecciones extends StatelessWidget {
                               fontSize: 16,
                               fontWeight: FontWeight.bold,
                               color: tema.colorScheme.onPrimaryContainer,
+                              height: 1.2,
                             ),
                           ),
                         ),
                       ],
                     ),
-                    const SizedBox(height: 8),
+                    const SizedBox(height: 12),
                     Text(
                       'Elige una sección temática para iniciar tu sesión de tutoría inteligente con IA.',
-                      style: TextStyle(fontSize: 12, color: tema.colorScheme.onSurfaceVariant),
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: tema.colorScheme.onSurfaceVariant,
+                      ),
                     ),
                   ],
                 ),
               ),
-              const SizedBox(height: 18),
+              const SizedBox(height: 20),
 
               Text(
                 'Secciones Temáticas (${unidad.secciones.length})',
-                style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                  color: tema.colorScheme.onSurface,
+                ),
               ),
-              const SizedBox(height: 10),
+              const SizedBox(height: 12),
 
-              // Lista de Secciones
+              // --- LISTA DE TARJETAS DE SECCIONES REDONDEADAS ---
               ...unidad.secciones.map((Seccion seccion) {
-                return Card(
-                  margin: const EdgeInsets.only(bottom: 14),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                  elevation: 1,
+                return Container(
+                  margin: const EdgeInsets.only(bottom: 16),
+                  decoration: BoxDecoration(
+                    color: tema.colorScheme.surface,
+                    borderRadius: BorderRadius.circular(20),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withValues(alpha: 0.04),
+                        blurRadius: 10,
+                        offset: const Offset(0, 4),
+                      ),
+                    ],
+                  ),
                   child: Padding(
-                    padding: const EdgeInsets.all(16),
+                    padding: const EdgeInsets.all(18),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
                           seccion.titulo,
-                          style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                            color: tema.colorScheme.onSurface,
+                          ),
                         ),
                         const SizedBox(height: 4),
                         Text(
                           seccion.descripcionCorta,
-                          style: TextStyle(fontSize: 13, color: tema.colorScheme.onSurfaceVariant),
+                          style: TextStyle(
+                            fontSize: 13,
+                            color: tema.colorScheme.onSurfaceVariant,
+                          ),
                         ),
-                        const SizedBox(height: 10),
+                        const SizedBox(height: 12),
                         Text(
                           'Conceptos Clave:',
                           style: TextStyle(
@@ -131,54 +179,67 @@ class PantallaSecciones extends StatelessWidget {
                           runSpacing: 6,
                           children: seccion.conceptosClave.map((concepto) {
                             return Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                               decoration: BoxDecoration(
-                                color: tema.colorScheme.surfaceVariant,
-                                borderRadius: BorderRadius.circular(6),
+                                color: tema.colorScheme.surfaceContainerHighest.withValues(alpha: 0.6),
+                                borderRadius: BorderRadius.circular(8),
                               ),
                               child: Text(
                                 concepto,
                                 style: TextStyle(
                                   fontSize: 11,
+                                  fontWeight: FontWeight.w500,
                                   color: tema.colorScheme.onSurfaceVariant,
                                 ),
                               ),
                             );
                           }).toList(),
                         ),
-                        const SizedBox(height: 14),
+                        const SizedBox(height: 16),
                         SizedBox(
                           width: double.infinity,
+                          height: 44,
                           child: ElevatedButton.icon(
                             style: ElevatedButton.styleFrom(
                               backgroundColor: tema.colorScheme.primary,
                               foregroundColor: Colors.white,
-                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                              elevation: 0,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(14),
+                              ),
                             ),
                             onPressed: () => onSeleccionarSeccion(seccion),
                             icon: const Icon(Icons.auto_awesome, size: 18),
                             label: const Text(
                               'Iniciar Tutoría con IA',
-                              style: TextStyle(fontWeight: FontWeight.bold),
+                              style: TextStyle(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 13,
+                              ),
                             ),
                           ),
                         ),
-                        // CAMBIO (libro): páginas de la sección y acceso al libro.
-                        if (paginasPorSeccion.containsKey(seccion.id))
+                        if (paginasPorSeccion.containsKey(seccion.id)) ...[
+                          const SizedBox(height: 8),
                           SizedBox(
                             width: double.infinity,
                             child: TextButton.icon(
+                              style: TextButton.styleFrom(
+                                foregroundColor: tema.colorScheme.primary,
+                              ),
                               onPressed: () => abrirLibro(
                                 context,
                                 grado: grado,
                                 seccion: seccion,
                               ),
-                              icon: const Icon(Icons.menu_book, size: 18),
+                              icon: const Icon(Icons.menu_book_outlined, size: 18),
                               label: Text(
                                 'Ver en el libro (${paginasPorSeccion[seccion.id]!.etiqueta})',
+                                style: const TextStyle(fontSize: 12),
                               ),
                             ),
                           ),
+                        ],
                       ],
                     ),
                   ),

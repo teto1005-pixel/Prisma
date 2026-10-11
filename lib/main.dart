@@ -1,10 +1,12 @@
+// lib/main.dart
+
 import 'package:flutter/material.dart';
+import 'data/datos_curriculo.dart';
 import 'models/estructura_academica.dart';
 import 'models/perfil_estudiante.dart';
 import 'screens/pantalla_chat_tutor.dart';
 import 'screens/pantalla_formulario.dart';
 import 'screens/pantalla_formulas.dart';
-import 'screens/pantalla_grados.dart';
 import 'screens/pantalla_secciones.dart';
 import 'screens/pantalla_unidades.dart';
 
@@ -18,12 +20,11 @@ class SecundariaIAApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Paleta Deep Purple / Indigo moderno
     final colorScheme = ColorScheme.fromSeed(
-      seedColor: const Color(0xFF4338CA), // Indigo profundo elegante
+      seedColor: const Color(0xFF4338CA),
       primary: const Color(0xFF4338CA),
-      secondary: const Color(0xFF7E22CE), // Violeta profundo
-      tertiary: const Color(0xFF0EA5E9),  // Acento cian
+      secondary: const Color(0xFF7E22CE),
+      tertiary: const Color(0xFF0EA5E9),
       brightness: Brightness.light,
     );
 
@@ -46,7 +47,6 @@ class SecundariaIAApp extends StatelessWidget {
   }
 }
 
-/// Gestiona el estado de navegación y persistencia en memoria del perfil del estudiante.
 class EnrutadorSecundariaIA extends StatefulWidget {
   const EnrutadorSecundariaIA({super.key});
 
@@ -57,7 +57,7 @@ class EnrutadorSecundariaIA extends StatefulWidget {
 class _EnrutadorSecundariaIAState extends State<EnrutadorSecundariaIA> {
   PerfilEstudiante _perfil = PerfilEstudiante(
     nombre: '',
-    gradoId: 'grado_7',
+    gradoId: '7mo',
     estiloAprendizaje: EstiloAprendizaje.pasoAPaso,
   );
 
@@ -66,13 +66,17 @@ class _EnrutadorSecundariaIAState extends State<EnrutadorSecundariaIA> {
   Unidad? _unidadSeleccionada;
   Seccion? _seccionSeleccionada;
 
-  // CAMBIO (pestañas): 0 = Aprender (grados), 1 = Formulario (PDF).
   int _pestana = 0;
-  bool _formularioVisitado = false; // el PDF se abre solo la primera vez que se entra
+  bool _formularioVisitado = false;
+
+  Grado _obtenerGradoActual() {
+    return _gradoSeleccionado ??
+        DatosCurriculo.obtenerGradoPorId(_perfil.gradoId) ??
+        listaGrados.first;
+  }
 
   @override
   Widget build(BuildContext context) {
-    // 1. Si el perfil aún no se ha completado o está en modo edición, mostrar el formulario
     if (!_perfil.estaCompletado || _esModoEdicionPerfil) {
       return PantallaFormulario(
         perfilActual: _perfil,
@@ -81,15 +85,19 @@ class _EnrutadorSecundariaIAState extends State<EnrutadorSecundariaIA> {
           setState(() {
             _perfil = nuevoPerfil;
             _esModoEdicionPerfil = false;
+            _gradoSeleccionado =
+                DatosCurriculo.obtenerGradoPorId(nuevoPerfil.gradoId) ??
+                    listaGrados.first;
           });
         },
       );
     }
 
-    // 2. Si se seleccionó una sección, mostrar la pantalla de Chat con el Tutor IA
-    if (_seccionSeleccionada != null && _unidadSeleccionada != null && _gradoSeleccionado != null) {
+    final gradoActual = _obtenerGradoActual();
+
+    if (_seccionSeleccionada != null && _unidadSeleccionada != null) {
       return PantallaChatTutor(
-        grado: _gradoSeleccionado!,
+        grado: gradoActual,
         unidad: _unidadSeleccionada!,
         seccion: _seccionSeleccionada!,
         perfil: _perfil,
@@ -101,10 +109,9 @@ class _EnrutadorSecundariaIAState extends State<EnrutadorSecundariaIA> {
       );
     }
 
-    // 3. Si se seleccionó una unidad, mostrar la lista de Secciones temáticas
-    if (_unidadSeleccionada != null && _gradoSeleccionado != null) {
+    if (_unidadSeleccionada != null) {
       return PantallaSecciones(
-        grado: _gradoSeleccionado!,
+        grado: gradoActual,
         unidad: _unidadSeleccionada!,
         onSeleccionarSeccion: (seccion) {
           setState(() {
@@ -119,33 +126,23 @@ class _EnrutadorSecundariaIAState extends State<EnrutadorSecundariaIA> {
       );
     }
 
-    // 4. Si se seleccionó un grado, mostrar la lista de Unidades de dicho grado
-    if (_gradoSeleccionado != null) {
-      return PantallaUnidades(
-        grado: _gradoSeleccionado!,
-        onSeleccionarUnidad: (unidad) {
-          setState(() {
-            _unidadSeleccionada = unidad;
-          });
-        },
-        onVolver: () {
-          setState(() {
-            _gradoSeleccionado = null;
-          });
-        },
-      );
-    }
-
-    // 5. Por defecto: dos pestañas, "Aprender" (grados) y "Formulario" (PDF)
     return Scaffold(
       body: IndexedStack(
         index: _pestana,
         children: [
-          PantallaGrados(
-            perfil: _perfil,
-            onSeleccionarGrado: (grado) {
+          PantallaUnidades(
+            grado: gradoActual,
+            nombreEstudiante: _perfil.nombre,
+            onSeleccionarUnidad: (unidad) {
               setState(() {
-                _gradoSeleccionado = grado;
+                _unidadSeleccionada = unidad;
+              });
+            },
+            onCambiarGrado: (nuevoGrado) {
+              setState(() {
+                _gradoSeleccionado = nuevoGrado;
+                _unidadSeleccionada = null;
+                _seccionSeleccionada = null;
               });
             },
             onEditarPerfil: () {
@@ -156,8 +153,8 @@ class _EnrutadorSecundariaIAState extends State<EnrutadorSecundariaIA> {
           ),
           _formularioVisitado
               ? PantallaFormulas(
-            key: ValueKey(_perfil.gradoId),
-            gradoInicialId: _perfil.gradoId,
+            key: ValueKey(gradoActual.id),
+            gradoInicialId: gradoActual.id,
           )
               : const SizedBox.shrink(),
         ],

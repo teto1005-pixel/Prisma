@@ -2,7 +2,6 @@
 
 /// Estilos de aprendizaje preferidos por el estudiante para adaptar pedagógicamente las explicaciones.
 enum EstiloAprendizaje {
-  visual,
   pasoAPaso,
   simplificado,
   explicativo,
@@ -11,8 +10,6 @@ enum EstiloAprendizaje {
 extension EstiloAprendizajeExtension on EstiloAprendizaje {
   String get nombreLegible {
     switch (this) {
-      case EstiloAprendizaje.visual:
-        return 'Visual';
       case EstiloAprendizaje.pasoAPaso:
         return 'Paso a paso';
       case EstiloAprendizaje.simplificado:
@@ -24,8 +21,6 @@ extension EstiloAprendizajeExtension on EstiloAprendizaje {
 
   String get descripcion {
     switch (this) {
-      case EstiloAprendizaje.visual:
-        return 'Analogías gráficas, esquemas mentales y descripciones vívidas.';
       case EstiloAprendizaje.pasoAPaso:
         return 'Procedimientos ordenados y secuenciales (Paso 1, Paso 2...).';
       case EstiloAprendizaje.simplificado:
@@ -37,8 +32,6 @@ extension EstiloAprendizajeExtension on EstiloAprendizaje {
 
   String get instruccionPedagogica {
     switch (this) {
-      case EstiloAprendizaje.visual:
-        return 'Utiliza analogías visuales, representaciones gráficas estructuradas en texto, esquemas y viñetas organizadas visualmente.';
       case EstiloAprendizaje.pasoAPaso:
         return 'Estructura toda la explicación en pasos numerados estrictos (Paso 1, Paso 2, etc.), sin saltarte ningún procedimiento intermedio.';
       case EstiloAprendizaje.simplificado:

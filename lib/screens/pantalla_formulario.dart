@@ -58,7 +58,6 @@ class _PantallaFormularioState extends State<PantallaFormulario> {
       estiloAprendizaje: _estiloSeleccionado,
     );
 
-    // Guardar que la app ya fue configurada si es la primera vez
     if (!widget.esEdicion) {
       final prefs = await SharedPreferences.getInstance();
       await prefs.setBool('ya_configurado', true);
@@ -72,32 +71,43 @@ class _PantallaFormularioState extends State<PantallaFormulario> {
     final tema = Theme.of(context);
 
     return Scaffold(
+      backgroundColor: tema.colorScheme.surfaceContainerLowest,
       appBar: AppBar(
+        elevation: 0,
+        backgroundColor: tema.colorScheme.primary,
+        foregroundColor: Colors.white,
         title: Row(
           children: [
             Container(
               padding: const EdgeInsets.all(6),
               decoration: BoxDecoration(
-                color: tema.colorScheme.primaryContainer,
+                color: Colors.white.withValues(alpha: 0.2),
                 shape: BoxShape.circle,
               ),
-              child: Icon(
-                Icons.school,
-                color: tema.colorScheme.primary,
-                size: 22,
+              child: const Icon(
+                Icons.school_rounded,
+                color: Colors.white,
+                size: 20,
               ),
             ),
-            const SizedBox(width: 10),
+            const SizedBox(width: 12),
             Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
                   widget.esEdicion ? 'Editar Mi Perfil' : 'Bienvenido a Prisma',
-                  style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                  style: const TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.white,
+                  ),
                 ),
                 Text(
                   'Educación Secundaria en Nicaragua',
-                  style: TextStyle(fontSize: 12, color: tema.colorScheme.onSurfaceVariant),
+                  style: TextStyle(
+                    fontSize: 11,
+                    color: Colors.white.withValues(alpha: 0.8),
+                  ),
                 ),
               ],
             ),
@@ -108,54 +118,86 @@ class _PantallaFormularioState extends State<PantallaFormulario> {
         child: ConstrainedBox(
           constraints: const BoxConstraints(maxWidth: 700),
           child: SingleChildScrollView(
-            padding: const EdgeInsets.all(20),
+            padding: const EdgeInsets.all(16),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Banner Hero Educativo
+                // --- BANNER HERO EDUCATIVO ---
                 Container(
                   width: double.infinity,
                   padding: const EdgeInsets.all(20),
                   decoration: BoxDecoration(
                     gradient: LinearGradient(
-                      colors: [tema.colorScheme.primary, tema.colorScheme.secondary],
+                      colors: [
+                        tema.colorScheme.primary,
+                        tema.colorScheme.secondary,
+                      ],
                       begin: Alignment.topLeft,
                       end: Alignment.bottomRight,
                     ),
                     borderRadius: BorderRadius.circular(20),
+                    boxShadow: [
+                      BoxShadow(
+                        color: tema.colorScheme.primary.withValues(alpha: 0.2),
+                        blurRadius: 12,
+                        offset: const Offset(0, 4),
+                      ),
+                    ],
                   ),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Row(
                         children: const [
-                          Icon(Icons.auto_awesome, color: Colors.white, size: 22),
+                          Icon(Icons.auto_awesome, color: Colors.white70, size: 20),
                           SizedBox(width: 8),
                           Text(
                             'Tutor Inteligente con IA',
-                            style: TextStyle(color: Colors.white70, fontWeight: FontWeight.bold),
+                            style: TextStyle(
+                              color: Colors.white70,
+                              fontWeight: FontWeight.bold,
+                              fontSize: 12,
+                            ),
                           ),
                         ],
                       ),
                       const SizedBox(height: 8),
                       const Text(
                         'Aprende a tu propio ritmo con IA',
-                        style: TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.bold),
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 20,
+                          fontWeight: FontWeight.bold,
+                        ),
                       ),
                       const SizedBox(height: 6),
                       const Text(
                         'Alineado con el currículo del MINED para estudiantes de secundaria de Nicaragua.',
-                        style: TextStyle(color: Colors.white, fontSize: 13, height: 1.3),
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 13,
+                          height: 1.3,
+                        ),
                       ),
                     ],
                   ),
                 ),
-                const SizedBox(height: 24),
+                const SizedBox(height: 20),
 
-                // 1. Campo de Nombre
-                Card(
-                  shape: RoundedCornerShape(16),
-                  elevation: 1,
+                // --- 1. CAMPO DE NOMBRE ---
+                Container(
+                  margin: const EdgeInsets.only(bottom: 16),
+                  decoration: BoxDecoration(
+                    color: tema.colorScheme.surface,
+                    borderRadius: BorderRadius.circular(20),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withValues(alpha: 0.04),
+                        blurRadius: 10,
+                        offset: const Offset(0, 4),
+                      ),
+                    ],
+                  ),
                   child: Padding(
                     padding: const EdgeInsets.all(18),
                     child: Column(
@@ -164,24 +206,45 @@ class _PantallaFormularioState extends State<PantallaFormulario> {
                         Text(
                           '1. Tu Nombre',
                           style: TextStyle(
-                            fontSize: 16,
+                            fontSize: 15,
                             fontWeight: FontWeight.bold,
                             color: tema.colorScheme.primary,
                           ),
                         ),
-                        const SizedBox(height: 6),
+                        const SizedBox(height: 4),
                         Text(
-                          '¿Cómo te gustaría que el tutor IA te llame en las sesiones?',
-                          style: TextStyle(fontSize: 13, color: tema.colorScheme.onSurfaceVariant),
+                          '¿Cómo te gustaría que el tutor te llame en las sesiones?',
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: tema.colorScheme.onSurfaceVariant,
+                          ),
                         ),
-                        const SizedBox(height: 12),
+                        const SizedBox(height: 14),
                         TextField(
                           controller: _controladorNombre,
                           decoration: InputDecoration(
-                            hintText: 'Ej: Carlos Fonseca, María Valle...',
+                            hintText: 'Nombre o Apodo',
                             errorText: _errorNombre ? 'Por favor ingresa tu nombre' : null,
-                            border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                            prefixIcon: const Icon(Icons.person_outline),
+                            filled: true,
+                            fillColor: tema.colorScheme.surfaceContainerHighest.withValues(alpha: 0.4),
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(14),
+                              borderSide: BorderSide.none,
+                            ),
+                            enabledBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(14),
+                              borderSide: BorderSide(
+                                color: tema.colorScheme.outlineVariant.withValues(alpha: 0.5),
+                              ),
+                            ),
+                            focusedBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(14),
+                              borderSide: BorderSide(
+                                color: tema.colorScheme.primary,
+                                width: 1.5,
+                              ),
+                            ),
+                            prefixIcon: Icon(Icons.person_outline, color: tema.colorScheme.primary),
                           ),
                           onChanged: (_) {
                             if (_errorNombre) setState(() => _errorNombre = false);
@@ -191,12 +254,21 @@ class _PantallaFormularioState extends State<PantallaFormulario> {
                     ),
                   ),
                 ),
-                const SizedBox(height: 18),
 
-                // 2. Selección de Grado Escolar
-                Card(
-                  shape: RoundedCornerShape(16),
-                  elevation: 1,
+                // --- 2. SELECCIÓN DE GRADO ESCOLAR ---
+                Container(
+                  margin: const EdgeInsets.only(bottom: 16),
+                  decoration: BoxDecoration(
+                    color: tema.colorScheme.surface,
+                    borderRadius: BorderRadius.circular(20),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withValues(alpha: 0.04),
+                        blurRadius: 10,
+                        offset: const Offset(0, 4),
+                      ),
+                    ],
+                  ),
                   child: Padding(
                     padding: const EdgeInsets.all(18),
                     child: Column(
@@ -205,15 +277,18 @@ class _PantallaFormularioState extends State<PantallaFormulario> {
                         Text(
                           '2. Selecciona tu Grado de Secundaria',
                           style: TextStyle(
-                            fontSize: 16,
+                            fontSize: 15,
                             fontWeight: FontWeight.bold,
                             color: tema.colorScheme.primary,
                           ),
                         ),
-                        const SizedBox(height: 6),
+                        const SizedBox(height: 4),
                         Text(
                           'El tutor adaptará la complejidad temática al grado oficial correspondiente.',
-                          style: TextStyle(fontSize: 13, color: tema.colorScheme.onSurfaceVariant),
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: tema.colorScheme.onSurfaceVariant,
+                          ),
                         ),
                         const SizedBox(height: 14),
                         Wrap(
@@ -222,13 +297,31 @@ class _PantallaFormularioState extends State<PantallaFormulario> {
                           children: DatosCurriculo.grados.map((Grado grado) {
                             final bool seleccionado = grado.id == _gradoSeleccionadoId;
                             return ChoiceChip(
-                              label: Column(
-                                mainAxisSize: MainAxisSize.min,
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(grado.nombre, style: const TextStyle(fontWeight: FontWeight.bold)),
-                                  Text(grado.alias, style: const TextStyle(fontSize: 10)),
-                                ],
+                              label: Padding(
+                                padding: const EdgeInsets.symmetric(vertical: 2),
+                                child: Column(
+                                  mainAxisSize: MainAxisSize.min,
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      grado.nombre,
+                                      style: TextStyle(
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: 12,
+                                        color: seleccionado ? Colors.white : tema.colorScheme.onSurface,
+                                      ),
+                                    ),
+                                    Text(
+                                      grado.alias,
+                                      style: TextStyle(
+                                        fontSize: 10,
+                                        color: seleccionado
+                                            ? Colors.white.withValues(alpha: 0.8)
+                                            : tema.colorScheme.onSurfaceVariant,
+                                      ),
+                                    ),
+                                  ],
+                                ),
                               ),
                               selected: seleccionado,
                               onSelected: (bool selected) {
@@ -236,8 +329,16 @@ class _PantallaFormularioState extends State<PantallaFormulario> {
                                   setState(() => _gradoSeleccionadoId = grado.id);
                                 }
                               },
-                              selectedColor: tema.colorScheme.primaryContainer,
-                              shape: RoundedCornerShape(12),
+                              selectedColor: tema.colorScheme.primary,
+                              backgroundColor: tema.colorScheme.surfaceContainerHighest.withValues(alpha: 0.4),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(14),
+                                side: BorderSide(
+                                  color: seleccionado
+                                      ? Colors.transparent
+                                      : tema.colorScheme.outlineVariant.withValues(alpha: 0.5),
+                                ),
+                              ),
                             );
                           }).toList(),
                         ),
@@ -245,12 +346,21 @@ class _PantallaFormularioState extends State<PantallaFormulario> {
                     ),
                   ),
                 ),
-                const SizedBox(height: 18),
 
-                // 3. Estilo de Aprendizaje
-                Card(
-                  shape: RoundedCornerShape(16),
-                  elevation: 1,
+                // --- 3. ESTILO DE APRENDIZAJE ---
+                Container(
+                  margin: const EdgeInsets.only(bottom: 20),
+                  decoration: BoxDecoration(
+                    color: tema.colorScheme.surface,
+                    borderRadius: BorderRadius.circular(20),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withValues(alpha: 0.04),
+                        blurRadius: 10,
+                        offset: const Offset(0, 4),
+                      ),
+                    ],
+                  ),
                   child: Padding(
                     padding: const EdgeInsets.all(18),
                     child: Column(
@@ -259,15 +369,18 @@ class _PantallaFormularioState extends State<PantallaFormulario> {
                         Text(
                           '3. Tu Estilo de Aprendizaje Preferido',
                           style: TextStyle(
-                            fontSize: 16,
+                            fontSize: 15,
                             fontWeight: FontWeight.bold,
                             color: tema.colorScheme.primary,
                           ),
                         ),
-                        const SizedBox(height: 6),
+                        const SizedBox(height: 4),
                         Text(
                           '¿De qué manera asimilas mejor las explicaciones y materias?',
-                          style: TextStyle(fontSize: 13, color: tema.colorScheme.onSurfaceVariant),
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: tema.colorScheme.onSurfaceVariant,
+                          ),
                         ),
                         const SizedBox(height: 14),
                         ...EstiloAprendizaje.values.map((estilo) {
@@ -275,25 +388,30 @@ class _PantallaFormularioState extends State<PantallaFormulario> {
                           return Padding(
                             padding: const EdgeInsets.only(bottom: 8),
                             child: InkWell(
-                              borderRadius: BorderRadius.circular(12),
+                              borderRadius: BorderRadius.circular(14),
                               onTap: () => setState(() => _estiloSeleccionado = estilo),
-                              child: Container(
-                                padding: const EdgeInsets.all(12),
+                              child: AnimatedContainer(
+                                duration: const Duration(milliseconds: 200),
+                                padding: const EdgeInsets.all(14),
                                 decoration: BoxDecoration(
                                   color: seleccionado
-                                      ? tema.colorScheme.primaryContainer.withOpacity(0.5)
-                                      : tema.colorScheme.surfaceVariant.withOpacity(0.4),
-                                  borderRadius: BorderRadius.circular(12),
+                                      ? tema.colorScheme.primaryContainer.withValues(alpha: 0.5)
+                                      : tema.colorScheme.surfaceContainerHighest.withValues(alpha: 0.3),
+                                  borderRadius: BorderRadius.circular(14),
                                   border: Border.all(
-                                    color: seleccionado ? tema.colorScheme.primary : Colors.transparent,
-                                    width: 1.5,
+                                    color: seleccionado
+                                        ? tema.colorScheme.primary
+                                        : tema.colorScheme.outlineVariant.withValues(alpha: 0.5),
+                                    width: seleccionado ? 1.5 : 1.0,
                                   ),
                                 ),
                                 child: Row(
                                   children: [
                                     Icon(
                                       _obtenerIconoEstilo(estilo),
-                                      color: seleccionado ? tema.colorScheme.primary : tema.colorScheme.onSurfaceVariant,
+                                      color: seleccionado
+                                          ? tema.colorScheme.primary
+                                          : tema.colorScheme.onSurfaceVariant,
                                     ),
                                     const SizedBox(width: 12),
                                     Expanded(
@@ -304,13 +422,17 @@ class _PantallaFormularioState extends State<PantallaFormulario> {
                                             estilo.nombreLegible,
                                             style: TextStyle(
                                               fontWeight: FontWeight.bold,
-                                              color: seleccionado ? tema.colorScheme.primary : null,
+                                              fontSize: 13,
+                                              color: seleccionado
+                                                  ? tema.colorScheme.primary
+                                                  : tema.colorScheme.onSurface,
                                             ),
                                           ),
+                                          const SizedBox(height: 2),
                                           Text(
                                             estilo.descripcion,
                                             style: TextStyle(
-                                              fontSize: 12,
+                                              fontSize: 11,
                                               color: tema.colorScheme.onSurfaceVariant,
                                             ),
                                           ),
@@ -327,9 +449,8 @@ class _PantallaFormularioState extends State<PantallaFormulario> {
                     ),
                   ),
                 ),
-                const SizedBox(height: 24),
 
-                // Botón de Inicio
+                // --- BOTÓN DE INICIO ---
                 SizedBox(
                   width: double.infinity,
                   height: 52,
@@ -337,17 +458,23 @@ class _PantallaFormularioState extends State<PantallaFormulario> {
                     style: ElevatedButton.styleFrom(
                       backgroundColor: tema.colorScheme.primary,
                       foregroundColor: Colors.white,
-                      shape: RoundedCornerShape(14),
+                      elevation: 0,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(16),
+                      ),
                     ),
                     onPressed: _guardarFormulario,
-                    icon: const Icon(Icons.school),
+                    icon: const Icon(Icons.school, size: 20),
                     label: Text(
-                      widget.esEdicion ? 'Guardar Cambios' : 'Comenzar Tutoría SecundariaIA',
-                      style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                      widget.esEdicion ? 'Guardar Cambios' : 'Comenzar Tutoría Secundaria',
+                      style: const TextStyle(
+                        fontSize: 15,
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
                   ),
                 ),
-                const SizedBox(height: 30),
+                const SizedBox(height: 24),
               ],
             ),
           ),
@@ -358,17 +485,12 @@ class _PantallaFormularioState extends State<PantallaFormulario> {
 
   IconData _obtenerIconoEstilo(EstiloAprendizaje estilo) {
     switch (estilo) {
-      case EstiloAprendizaje.visual:
-        return Icons.visibility;
       case EstiloAprendizaje.pasoAPaso:
-        return Icons.format_list_numbered;
+        return Icons.format_list_numbered_rounded;
       case EstiloAprendizaje.simplificado:
-        return Icons.bolt;
+        return Icons.bolt_rounded;
       case EstiloAprendizaje.explicativo:
-        return Icons.psychology;
+        return Icons.psychology_rounded;
     }
   }
-
-  RoundedRectangleBorder RoundedCornerShape(double r) =>
-      RoundedRectangleBorder(borderRadius: BorderRadius.circular(r));
 }

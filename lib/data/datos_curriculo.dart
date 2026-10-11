@@ -19,7 +19,7 @@ Grado _grado({
     id: id,
     nombre: nombre,
     alias: descripcion,
-    descripcion: descripcion,
+    descripcion: '',
     colorHex: color,
     unidades: [
       for (final (i, (titulo, secciones)) in unidades.indexed)

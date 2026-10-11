@@ -27,7 +27,7 @@ class MensajeUI {
   });
 }
 
-/// Pantalla principal de conversación en tiempo real con el Tutor Inteligente SecundariaIA.
+/// Pantalla principal de conversación en tiempo real con el Tutor Inteligente Secundaria.
 class PantallaChatTutor extends StatefulWidget {
   final Grado grado;
   final Unidad unidad;
@@ -63,6 +63,28 @@ class _PantallaChatTutorState extends State<PantallaChatTutor> {
     _iniciarSesion();
   }
 
+  /// Función para reparar automáticamente bloques LaTeX mal cerrados o pegados
+  String _corregirLatex(String texto) {
+    if (texto.isEmpty) return texto;
+
+    String resultado = texto;
+
+    // Repara casos como $3^2 + 4^2$ o expresiones donde la IA no cierra $ antes de comas, puntos o signos ?
+    resultado = resultado.replaceAllMapped(
+      RegExp(r'(\$[^\$\n]+?)([\,;\.\?]|(?:\s+antes|\s+decimos|\s+donde|\s+y\s+|\s+que\s+))'),
+          (match) {
+        String bloque = match.group(1)!;
+        String seguido = match.group(2)!;
+        if (!bloque.endsWith(r'$')) {
+          return '$bloque\$$seguido';
+        }
+        return match.group(0)!;
+      },
+    );
+
+    return resultado;
+  }
+
   void _iniciarSesion() {
     _servicioGemini.iniciarChat(
       perfil: widget.perfil,
@@ -79,9 +101,9 @@ class _PantallaChatTutorState extends State<PantallaChatTutor> {
         id: DateTime.now().millisecondsSinceEpoch.toString(),
         esUsuario: false,
         texto: '''
-¡Hola **$nombreEstudiante**! 👋 Soy tu tutor de **SecundariaIA**.
+¡Hola **$nombreEstudiante**! 👋 Soy tu tutor de **Secundaria**.
 
-Hoy exploraremos juntos: **${widget.seccion.titulo}** (*${widget.unidad.asignatura} - ${widget.grado.nombre}*).
+- Hoy exploraremos juntos: **${widget.seccion.titulo}** (*${widget.unidad.asignatura} - ${widget.grado.nombre}*).
 
 He adaptado mis explicaciones para ti con tu estilo preferido: **${widget.perfil.estiloAprendizaje.nombreLegible}**.
 
@@ -150,8 +172,6 @@ He adaptado mis explicaciones para ti con tu estilo preferido: **${widget.perfil
       await for (final trozo in _servicioGemini.enviarMensajeStream(mensajeLimpio)) {
         if (!mounted) return;
 
-        // Si se recibe la señal de que la transmisión se cortó a la mitad,
-        // se limpia la pantalla para que la nueva clave vuelva a escribir completa.
         if (trozo == '[REINICIAR_RESPUESTA]') {
           buffer.clear();
           setState(() => _textoEnCurso = '');
@@ -162,7 +182,7 @@ He adaptado mis explicaciones para ti con tu estilo preferido: **${widget.perfil
 
         if (reloj.elapsedMilliseconds >= 80) {
           reloj.reset();
-          setState(() => _textoEnCurso = buffer.toString());
+          setState(() => _textoEnCurso = _corregirLatex(buffer.toString()));
           _seguirAlFinal();
         }
       }
@@ -173,7 +193,7 @@ He adaptado mis explicaciones para ti con tu estilo preferido: **${widget.perfil
           MensajeUI(
             id: (DateTime.now().millisecondsSinceEpoch + 1).toString(),
             esUsuario: false,
-            texto: buffer.toString(),
+            texto: _corregirLatex(buffer.toString()),
             hora: _formatearHora(),
           ),
         );
@@ -238,13 +258,12 @@ He adaptado mis explicaciones para ti con tu estilo preferido: **${widget.perfil
               overflow: TextOverflow.ellipsis,
             ),
             Text(
-              '${widget.unidad.asignatura} • ${widget.grado.nombre}',
+              '${widget.unidad.asignatura} - ${widget.grado.nombre}',
               style: TextStyle(fontSize: 11, color: tema.colorScheme.onSurfaceVariant),
             ),
           ],
         ),
         actions: [
-          // CAMBIO (libro): acceso rápido al libro en la página de esta sección.
           if (paginasPorSeccion.containsKey(widget.seccion.id))
             IconButton(
               icon: const Icon(Icons.menu_book),
@@ -267,7 +286,6 @@ He adaptado mis explicaciones para ti con tu estilo preferido: **${widget.perfil
           constraints: const BoxConstraints(maxWidth: 800),
           child: Column(
             children: [
-              // CAMBIO (libro): franja con las páginas de la sección.
               if (paginasPorSeccion.containsKey(widget.seccion.id))
                 _construirBannerLibro(tema, paginasPorSeccion[widget.seccion.id]!),
               Expanded(
@@ -320,7 +338,7 @@ He adaptado mis explicaciones para ti con tu estilo preferido: **${widget.perfil
                             ),
                             const SizedBox(width: 8),
                             Text(
-                              'Tutor SecundariaIA está pensando...',
+                              'Prisma está pensando...',
                               style: TextStyle(fontSize: 12, color: tema.colorScheme.onSurfaceVariant),
                             ),
                           ],
@@ -459,15 +477,6 @@ He adaptado mis explicaciones para ti con tu estilo preferido: **${widget.perfil
                       mensaje.texto,
                       style: const TextStyle(color: Colors.white, fontSize: 14),
                     )
-                  else if (transmitiendo)
-                    Text(
-                      mensaje.texto,
-                      style: TextStyle(
-                        fontSize: 14,
-                        height: 1.4,
-                        color: tema.colorScheme.onSurface,
-                      ),
-                    )
                   else
                     GptMarkdown(
                       mensaje.texto,
@@ -522,8 +531,6 @@ He adaptado mis explicaciones para ti con tu estilo preferido: **${widget.perfil
     );
   }
 
-  /// CAMBIO (calculadora): abre la calculadora; "Usar en el chat" escribe el
-  /// resultado (por ejemplo 3/4 o 2√3) al final del mensaje que se está redactando.
   void _abrirCalculadora() {
     mostrarCalculadora(
       context,
@@ -548,7 +555,6 @@ He adaptado mis explicaciones para ti con tu estilo preferido: **${widget.perfil
       child: SafeArea(
         child: Row(
           children: [
-            // CAMBIO (calculadora)
             IconButton(
               icon: const Icon(Icons.calculate_outlined),
               tooltip: 'Calculadora',

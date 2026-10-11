@@ -1,19 +1,25 @@
 // lib/screens/pantalla_unidades.dart
 
 import 'package:flutter/material.dart';
+import '../data/datos_curriculo.dart';
 import '../models/estructura_academica.dart';
 
-/// Pantalla que presenta las unidades de aprendizaje correspondientes al grado seleccionado.
+/// Pantalla que presenta las unidades con diseño moderno, tarjetas redondeadas
+/// y colores alineados al tema principal.
 class PantallaUnidades extends StatefulWidget {
   final Grado grado;
+  final String nombreEstudiante;
   final Function(Unidad) onSeleccionarUnidad;
-  final VoidCallback onVolver;
+  final Function(Grado) onCambiarGrado;
+  final VoidCallback onEditarPerfil;
 
   const PantallaUnidades({
     super.key,
     required this.grado,
+    this.nombreEstudiante = '',
     required this.onSeleccionarUnidad,
-    required this.onVolver,
+    required this.onCambiarGrado,
+    required this.onEditarPerfil,
   });
 
   @override
@@ -32,22 +38,70 @@ class _PantallaUnidadesState extends State<PantallaUnidades> {
         ? widget.grado.unidades
         : widget.grado.unidades.where((u) => u.asignatura == _filtroAsignatura).toList();
 
+    final nombreMostrar = widget.nombreEstudiante.isNotEmpty ? widget.nombreEstudiante : 'estudiante';
+
     return Scaffold(
+      backgroundColor: tema.colorScheme.surfaceContainerLowest,
       appBar: AppBar(
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back),
-          onPressed: widget.onVolver,
-        ),
-        title: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+        elevation: 0,
+        backgroundColor: tema.colorScheme.primary,
+        foregroundColor: Colors.white,
+        title: Row(
           children: [
-            Text(widget.grado.nombre, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-            Text(
-              '${widget.grado.alias} • Unidades Curriculares',
-              style: TextStyle(fontSize: 12, color: tema.colorScheme.onSurfaceVariant),
+            const Text(
+              'PRISMA',
+              style: TextStyle(
+                fontWeight: FontWeight.w900,
+                letterSpacing: 1.2,
+                fontSize: 18,
+                color: Colors.white,
+              ),
+            ),
+            const SizedBox(width: 12),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 2),
+              decoration: BoxDecoration(
+                color: Colors.white.withValues(alpha: 0.18),
+                borderRadius: BorderRadius.circular(20),
+                border: Border.all(color: Colors.white.withValues(alpha: 0.25)),
+              ),
+              child: DropdownButtonHideUnderline(
+                child: DropdownButton<Grado>(
+                  value: widget.grado,
+                  isDense: true,
+                  dropdownColor: tema.colorScheme.primary,
+                  icon: const Icon(Icons.arrow_drop_down, color: Colors.white, size: 20),
+                  style: const TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.white,
+                  ),
+                  items: listaGrados.map((Grado g) {
+                    return DropdownMenuItem<Grado>(
+                      value: g,
+                      child: Text(g.nombre, style: const TextStyle(color: Colors.white)),
+                    );
+                  }).toList(),
+                  onChanged: (Grado? nuevoGrado) {
+                    if (nuevoGrado != null && nuevoGrado.id != widget.grado.id) {
+                      setState(() {
+                        _filtroAsignatura = 'Todas';
+                      });
+                      widget.onCambiarGrado(nuevoGrado);
+                    }
+                  },
+                ),
+              ),
             ),
           ],
         ),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.person_outline, color: Colors.white),
+            tooltip: 'Perfil',
+            onPressed: widget.onEditarPerfil,
+          ),
+        ],
       ),
       body: Center(
         child: ConstrainedBox(
@@ -55,95 +109,135 @@ class _PantallaUnidadesState extends State<PantallaUnidades> {
           child: ListView(
             padding: const EdgeInsets.all(16),
             children: [
-              // Barra de filtros por Asignatura
-              SingleChildScrollView(
-                scrollDirection: Axis.horizontal,
-                child: Row(
-                  children: asignaturas.map((asig) {
-                    final seleccionada = asig == _filtroAsignatura;
-                    return Padding(
-                      padding: const EdgeInsets.only(right: 8),
-                      child: FilterChip(
-                        label: Text(asig),
-                        selected: seleccionada,
-                        onSelected: (_) => setState(() => _filtroAsignatura = asig),
-                        selectedColor: tema.colorScheme.primaryContainer,
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              // --- BANNER DE SALUDO PERSONALIZADO ---
+              Padding(
+                padding: const EdgeInsets.symmetric(vertical: 8),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      '¡Hola, $nombreMostrar! 👋',
+                      style: TextStyle(
+                        fontSize: 22,
+                        fontWeight: FontWeight.bold,
+                        color: tema.colorScheme.onSurface,
                       ),
-                    );
-                  }).toList(),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      'Estas son tus unidades para ${widget.grado.nombre} de Secundaria en Nicaragua',
+                      style: TextStyle(
+                        fontSize: 13,
+                        color: tema.colorScheme.onSurfaceVariant,
+                      ),
+                    ),
+                  ],
                 ),
               ),
               const SizedBox(height: 16),
 
-              Text(
-                'Unidades de Aprendizaje (${unidadesFiltradas.length})',
-                style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-              ),
-              const SizedBox(height: 10),
-
-              // Tarjetas de Unidades
-              ...unidadesFiltradas.map((Unidad unidad) {
-                return Card(
-                  margin: const EdgeInsets.only(bottom: 12),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                  elevation: 1,
-                  child: InkWell(
-                    borderRadius: BorderRadius.circular(16),
-                    onTap: () => widget.onSeleccionarUnidad(unidad),
-                    child: Padding(
-                      padding: const EdgeInsets.all(16),
-                      child: Row(
-                        children: [
-                          Container(
-                            width: 50,
-                            height: 50,
-                            decoration: BoxDecoration(
-                              color: tema.colorScheme.primaryContainer,
-                              borderRadius: BorderRadius.circular(14),
+              // --- FILTROS POR ASIGNATURA ---
+              if (asignaturas.length > 2)
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 16),
+                  child: SingleChildScrollView(
+                    scrollDirection: Axis.horizontal,
+                    child: Row(
+                      children: asignaturas.map((asig) {
+                        final seleccionada = asig == _filtroAsignatura;
+                        return Padding(
+                          padding: const EdgeInsets.only(right: 8),
+                          child: ChoiceChip(
+                            label: Text(asig),
+                            selected: seleccionada,
+                            onSelected: (_) => setState(() => _filtroAsignatura = asig),
+                            selectedColor: tema.colorScheme.primary,
+                            labelStyle: TextStyle(
+                              color: seleccionada ? Colors.white : tema.colorScheme.onSurface,
+                              fontWeight: FontWeight.w600,
+                              fontSize: 12,
                             ),
-                            child: Icon(
-                              _resolverIcono(unidad.icono),
-                              color: tema.colorScheme.primary,
-                              size: 26,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(20),
                             ),
                           ),
-                          const SizedBox(width: 14),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Container(
-                                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                                  decoration: BoxDecoration(
-                                    color: tema.colorScheme.secondaryContainer.withOpacity(0.6),
-                                    borderRadius: BorderRadius.circular(6),
-                                  ),
-                                  child: Text(
-                                    '${unidad.asignatura} • Unidad ${unidad.numero}',
+                        );
+                      }).toList(),
+                    ),
+                  ),
+                ),
+
+              // --- LISTA DE TARJETAS REDONDEADAS ---
+              ...unidadesFiltradas.map((Unidad unidad) {
+                return Container(
+                  margin: const EdgeInsets.only(bottom: 12),
+                  decoration: BoxDecoration(
+                    color: tema.colorScheme.surface,
+                    borderRadius: BorderRadius.circular(20),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withValues(alpha: 0.04),
+                        blurRadius: 10,
+                        offset: const Offset(0, 4),
+                      ),
+                    ],
+                  ),
+                  child: Material(
+                    color: Colors.transparent,
+                    borderRadius: BorderRadius.circular(20),
+                    child: InkWell(
+                      borderRadius: BorderRadius.circular(20),
+                      onTap: () => widget.onSeleccionarUnidad(unidad),
+                      child: Padding(
+                        padding: const EdgeInsets.all(18),
+                        child: Row(
+                          crossAxisAlignment: CrossAxisAlignment.center,
+                          children: [
+                            Container(
+                              width: 48,
+                              height: 48,
+                              decoration: BoxDecoration(
+                                color: tema.colorScheme.primaryContainer.withValues(alpha: 0.6),
+                                borderRadius: BorderRadius.circular(14),
+                              ),
+                              child: Icon(
+                                _resolverIcono(unidad.icono),
+                                color: tema.colorScheme.primary,
+                                size: 24,
+                              ),
+                            ),
+                            const SizedBox(width: 14),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    unidad.titulo,
                                     style: TextStyle(
-                                      fontSize: 11,
+                                      fontSize: 15,
                                       fontWeight: FontWeight.bold,
-                                      color: tema.colorScheme.onSecondaryContainer,
+                                      color: tema.colorScheme.onSurface,
+                                      height: 1.2,
                                     ),
                                   ),
-                                ),
-                                const SizedBox(height: 4),
-                                Text(
-                                  unidad.titulo,
-                                  style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
-                                ),
-                                const SizedBox(height: 4),
-                                Text(
-                                  '${unidad.secciones.length} secciones temáticas con Tutor IA',
-                                  style: TextStyle(fontSize: 12, color: tema.colorScheme.onSurfaceVariant),
-                                ),
-                              ],
+                                  const SizedBox(height: 4),
+                                  Text(
+                                    '${unidad.secciones.length} temas clave con Tutor IA',
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      color: tema.colorScheme.onSurfaceVariant,
+                                    ),
+                                  ),
+                                ],
+                              ),
                             ),
-                          ),
-                          const SizedBox(width: 8),
-                          Icon(Icons.arrow_forward_ios, size: 16, color: tema.colorScheme.primary),
-                        ],
+                            Icon(
+                              Icons.chevron_right_rounded,
+                              color: tema.colorScheme.onSurfaceVariant.withValues(alpha: 0.5),
+                              size: 22,
+                            ),
+                          ],
+                        ),
                       ),
                     ),
                   ),
@@ -159,32 +253,18 @@ class _PantallaUnidadesState extends State<PantallaUnidades> {
   IconData _resolverIcono(String icono) {
     switch (icono) {
       case 'calculate':
-        return Icons.calculate;
+        return Icons.calculate_outlined;
       case 'functions':
-        return Icons.functions;
+        return Icons.functions_outlined;
       case 'change_history':
-        return Icons.change_history;
+        return Icons.change_history_outlined;
       case 'show_chart':
-        return Icons.show_chart;
+        return Icons.show_chart_outlined;
       case 'menu_book':
       case 'auto_stories':
-        return Icons.menu_book;
-      case 'format_quote':
-        return Icons.format_quote;
-      case 'biotech':
-        return Icons.biotech;
-      case 'science':
-        return Icons.science;
-      case 'favorite':
-        return Icons.favorite;
-      case 'speed':
-        return Icons.speed;
-      case 'shield':
-        return Icons.shield;
-      case 'hub':
-        return Icons.hub;
+        return Icons.auto_stories_outlined;
       default:
-        return Icons.school;
+        return Icons.school_outlined;
     }
   }
 }

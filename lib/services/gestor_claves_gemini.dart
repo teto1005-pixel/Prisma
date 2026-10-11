@@ -82,35 +82,31 @@ class _EstadoClave {
     _depurar(ahora);
     const tope = GestorClavesGemini._maxSolicitudesPorMinuto;
     if (_usos.length >= tope) {
-      final liberar =
-      _usos[_usos.length - tope].add(GestorClavesGemini._ventana).difference(ahora);
+      final liberar = _usos[_usos.length - tope]
+          .add(GestorClavesGemini._ventana)
+          .difference(ahora);
       if (liberar > espera) espera = liberar;
     }
     return espera;
   }
 }
 
-/// Reparte las solicitudes entre varias claves de Gemini y salta a la
-/// siguiente cuando una se queda sin cuota o falla.
+/// Reparte las solicitudes entre varias claves de Gemini priorizando SIEMPRE la clave #1.
 ///
 /// Es un singleton: el estado de cada clave (en pausa, deshabilitada) se
 /// comparte entre todas las pantallas de chat mientras la app esté abierta.
 class GestorClavesGemini {
   GestorClavesGemini._(List<String> claves)
       : _estados = [for (final c in claves) _EstadoClave(c)] {
-    // Cada instalación empieza en una clave distinta para que muchos
-    // teléfonos no golpeen todos la clave #1 al mismo tiempo.
-    if (_estados.isNotEmpty) _siguiente = Random().nextInt(_estados.length);
     if (kDebugMode) {
-      debugPrint('[Gemini] ${_estados.length} clave(s) cargada(s)');
+      debugPrint('[Gemini] ${_estados.length} clave(s) cargada(s) (Prioridad: Clave #1)');
     }
   }
 
   static final GestorClavesGemini instancia =
   GestorClavesGemini._(ApiConfig.apiKeys);
 
-  /// Gemini limita a 15 solicitudes por minuto por clave en el nivel gratuito;
-  /// se deja un margen para no llegar al borde.
+  /// Margen prudente para solicitudes por minuto por clave.
   static const int _maxSolicitudesPorMinuto = 14;
   static const Duration _ventana = Duration(minutes: 1);
 
@@ -119,7 +115,6 @@ class GestorClavesGemini {
 
   final List<_EstadoClave> _estados;
   final Map<String, DateTime> _modeloLibreDesde = {};
-  int _siguiente = 0;
 
   bool get hayClaves => _estados.isNotEmpty;
 
@@ -127,24 +122,21 @@ class GestorClavesGemini {
   int numeroDe(String clave) => _estados.indexWhere((e) => e.clave == clave) + 1;
   int get cantidad => _estados.length;
 
-  /// Devuelve la siguiente clave disponible (en rotación) que no esté en
-  /// [excluir], o null si todas están en pausa, agotadas o ya se probaron.
+  /// Devuelve la primera clave disponible en orden estricto de prioridad (Clave 1 primero).
+  /// Si está en [excluir] o no disponible, toma la siguiente de respaldo.
   String? tomar({Set<String> excluir = const {}}) {
     final ahora = DateTime.now();
-    for (var k = 0; k < _estados.length; k++) {
-      final i = (_siguiente + k) % _estados.length;
+    for (var i = 0; i < _estados.length; i++) {
       final estado = _estados[i];
       if (excluir.contains(estado.clave) || !estado.disponible(ahora)) continue;
       estado.registrarUso(ahora);
-      _siguiente = (i + 1) % _estados.length;
       return estado.clave;
     }
     return null;
   }
 
   /// Elige el modelo a usar: el primero de la lista (principal y luego los de
-  /// respaldo) que no esté en [excluir] ni saturado. Si todos los que quedan
-  /// están saturados, devuelve el que se libere antes. Null si no queda ninguno.
+  /// respaldo) que no esté en [excluir] ni saturado.
   String? elegirModelo({Set<String> excluir = const {}}) {
     final ahora = DateTime.now();
     final candidatos =
@@ -171,8 +163,6 @@ class GestorClavesGemini {
   }
 
   /// Anota la falla de una clave: la pone en pausa o la deshabilita.
-  /// Si una clave falla una y otra vez con errores no reconocidos, la pausa
-  /// se duplica cada vez (10 s, 20 s, 40 s... hasta 10 minutos).
   void registrarFalla(String clave, FallaClave falla) {
     final indice = _estados.indexWhere((e) => e.clave == clave);
     if (indice < 0) return;
@@ -193,12 +183,10 @@ class GestorClavesGemini {
         estado.libreDesde = DateTime.now().add(espera);
       case TipoFalla.servidor:
       case TipoFalla.otra:
-      // Un fallo del servidor es del modelo, no de la clave: no se pausa la clave.
         break;
     }
 
     if (kDebugMode) {
-      // Solo se imprime el número de la clave, nunca la clave.
       debugPrint(
         '[Gemini] clave #${indice + 1} de ${_estados.length}: '
             '${falla.tipo.name}, pausa ${espera.inSeconds}s',
@@ -206,16 +194,14 @@ class GestorClavesGemini {
     }
   }
 
-  /// Anota que una clave y un modelo respondieron bien (borra sus rachas).
+  /// Anota que una clave y un modelo respondieron bien.
   void registrarExito(String clave, String modelo) {
     final indice = _estados.indexWhere((e) => e.clave == clave);
     if (indice >= 0) _estados[indice].fallosSeguidos = 0;
     _modeloLibreDesde.remove(modelo);
   }
 
-  /// SOLO PARA DEPURAR: prueba cada clave con una solicitud mínima y muestra
-  /// en la consola cuáles funcionan y cuáles no (nunca imprime las claves).
-  /// Llámalo temporalmente desde main(), solo en modo debug.
+  /// SOLO PARA DEPURAR: prueba cada clave con una solicitud mínima.
   Future<void> diagnosticar() async {
     if (!kDebugMode) return;
     debugPrint(
@@ -274,7 +260,6 @@ class GestorClavesGemini {
     if (e is TimeoutException) {
       return const FallaClave(TipoFalla.servidor, Duration(seconds: 30));
     }
-    // 👇 Ambos cortes de transmisión ahora se consideran fallas del servidor para que SÍ rote
     if (e is RespuestaIncompletaGemini || e is RespuestaCortadaGemini) {
       return const FallaClave(TipoFalla.servidor, Duration(seconds: 5));
     }
@@ -308,7 +293,6 @@ class GestorClavesGemini {
       return const FallaClave(TipoFalla.claveInvalida, Duration.zero);
     }
 
-    // Solicitud mal formada o modelo inexistente: con otra clave pasaría lo mismo.
     if (e.codigo == 400 || e.codigo == 404) {
       return const FallaClave(TipoFalla.otra, Duration.zero);
     }

@@ -38,7 +38,7 @@ class PantallaGrados extends StatelessWidget {
             Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text('SecundariaIA', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                const Text('Prisma', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
                 Text(
                   'Currículo MINED - Nicaragua',
                   style: TextStyle(fontSize: 11, color: tema.colorScheme.onSurfaceVariant),
@@ -208,13 +208,6 @@ class PantallaGrados extends StatelessWidget {
                                     fontWeight: FontWeight.w600,
                                     color: colorGrado,
                                   ),
-                                ),
-                                const SizedBox(height: 4),
-                                Text(
-                                  grado.descripcion,
-                                  style: TextStyle(fontSize: 12, color: tema.colorScheme.onSurfaceVariant),
-                                  maxLines: 2,
-                                  overflow: TextOverflow.ellipsis,
                                 ),
                                 const SizedBox(height: 6),
                                 Row(
