@@ -20,3 +20,26 @@
 {"logTime": "1011/180245", "level": "INFO", "location": "chrome\\browser\\sessions\\session_service_log.cc:326 EdgeLogSessionServiceMessage", "message": "SessionService exit: 1 tabs, 1 windows across the session."}
 {"logTime": "1011/180245", "level": "INFO", "location": "chrome\\browser\\sessions\\edge_exit_type_tracker.cc:192 SetExitTypeInternal", "message": "Clearing autorestore crash exit count for profile"}
 {"logTime": "1011/180245", "session": "END"}
+{"logTime": "1011/181205", "session": "START"}
+{"logTime": "1011/181205", "level": "INFO", "location": "chrome\\browser\\sessions\\session_service_log.cc:326 EdgeLogSessionServiceMessage", "message": "SessionServiceEvent: kStart - {\r\n   \"crashed\": false,\r\n   \"type\": 0\r\n}\r\n"}
+{"logTime": "1011/181206", "level": "INFO", "location": "chrome\\browser\\ui\\startup\\startup_browser_creator_impl.cc:445 EdgeLogLastSessionExitTypeOnStartup", "message": "Previous Session Exit Type: PreviousSessionExitType::kNormalBrowserShutDown"}
+{"logTime": "1011/181206", "level": "INFO", "location": "chrome\\browser\\ui\\startup\\startup_browser_creator_impl.cc:1683 DetermineURLsAndLaunch", "message": "Startup Preference: 0"}
+{"logTime": "1011/181206", "level": "INFO", "location": "chrome\\browser\\ui\\startup\\startup_browser_creator_impl.cc:1685 DetermineURLsAndLaunch", "message": "Browser Open Behavior: 0"}
+{"logTime": "1011/181208", "level": "INFO", "location": "components\\sessions\\core\\command_storage_manager.cc:638 operator()", "message": "Delete session file Session_13436214125826478, for SessionType SessionRestore"}
+{"logTime": "1011/181208", "level": "INFO", "location": "components\\sessions\\core\\command_storage_manager.cc:638 operator()", "message": "Delete session file Session_13436212267982490, for SessionType SessionRestore"}
+{"logTime": "1011/181208", "level": "INFO", "location": "components\\sessions\\core\\command_storage_manager.cc:638 operator()", "message": "Delete session file Session_13436168436221059, for SessionType SessionRestore"}
+{"logTime": "1011/181208", "level": "INFO", "location": "components\\sessions\\core\\command_storage_manager.cc:638 operator()", "message": "Delete session file Session_13436167947632647, for SessionType SessionRestore"}
+{"logTime": "1011/181208", "level": "INFO", "location": "components\\sessions\\core\\command_storage_manager.cc:638 operator()", "message": "Delete session file Session_13436167233479431, for SessionType SessionRestore"}
+{"logTime": "1011/181208", "level": "INFO", "location": "components\\sessions\\core\\command_storage_manager.cc:638 operator()", "message": "Delete session file Session_13436164588154394, for SessionType SessionRestore"}
+{"logTime": "1011/181208", "level": "INFO", "location": "components\\sessions\\core\\command_storage_manager.cc:638 operator()", "message": "Delete session file Session_13436164248522398, for SessionType SessionRestore"}
+{"logTime": "1011/181208", "level": "INFO", "location": "components\\sessions\\core\\command_storage_manager.cc:638 operator()", "message": "Delete session file Session_13436163944406679, for SessionType SessionRestore"}
+{"logTime": "1011/181208", "level": "INFO", "location": "components\\sessions\\core\\command_storage_manager.cc:638 operator()", "message": "Delete session file Session_13436162608592034, for SessionType SessionRestore"}
+{"logTime": "1011/181208", "level": "INFO", "location": "components\\sessions\\core\\command_storage_manager.cc:638 operator()", "message": "Delete session file Session_13436155882918381, for SessionType SessionRestore"}
+{"logTime": "1011/181208", "level": "INFO", "location": "components\\sessions\\core\\command_storage_manager.cc:638 operator()", "message": "Delete session file Session_13436154284453943, for SessionType SessionRestore"}
+{"logTime": "1011/181208", "level": "INFO", "location": "components\\sessions\\core\\command_storage_manager.cc:638 operator()", "message": "Delete session file Session_13436153832627193, for SessionType SessionRestore"}
+{"logTime": "1011/181208", "level": "INFO", "location": "components\\sessions\\core\\command_storage_manager.cc:638 operator()", "message": "Delete session file Session_13436150668651207, for SessionType SessionRestore"}
+{"logTime": "1011/181208", "level": "INFO", "location": "components\\sessions\\core\\command_storage_manager.cc:638 operator()", "message": "Delete session file Session_13436150026097589, for SessionType SessionRestore"}
+{"logTime": "1011/181208", "level": "INFO", "location": "components\\sessions\\core\\command_storage_manager.cc:638 operator()", "message": "Delete session file Session_13436149816933535, for SessionType SessionRestore"}
+{"logTime": "1011/181606", "level": "INFO", "location": "chrome\\browser\\sessions\\session_service_log.cc:326 EdgeLogSessionServiceMessage", "message": "SessionService exit: 1 tabs, 1 windows across the session."}
+{"logTime": "1011/181606", "level": "INFO", "location": "chrome\\browser\\sessions\\edge_exit_type_tracker.cc:192 SetExitTypeInternal", "message": "Clearing autorestore crash exit count for profile"}
+{"logTime": "1011/181607", "session": "END"}

@@ -67,6 +67,9 @@ class PantallaChatTutor extends StatefulWidget {
 }
 
 class _PantallaChatTutorState extends State<PantallaChatTutor> {
+  /// Almacén en memoria para no perder las conversaciones al salir de la pantalla
+  static final Map<String, List<MensajeUI>> _historialMensajes = {};
+
   /// Expresión regular de _corregirLatex: se compila una sola vez
   /// (antes se recompilaba en cada trozo recibido de la IA).
   static final RegExp _regexLatexPegado = RegExp(
@@ -157,14 +160,21 @@ class _PantallaChatTutorState extends State<PantallaChatTutor> {
       seccion: widget.seccion,
     );
 
+    // Si ya existen mensajes guardados para esta sección, los recuperamos
+    if (_historialMensajes.containsKey(widget.seccion.id) &&
+        _historialMensajes[widget.seccion.id]!.isNotEmpty) {
+      _mensajes.addAll(_historialMensajes[widget.seccion.id]!);
+      _hacerScrollAlFinal();
+      return;
+    }
+
     final horaActual = _formatearHora();
     final nombreEstudiante = widget.perfil.nombre.isNotEmpty ? widget.perfil.nombre : 'estudiante';
 
-    _mensajes.add(
-      MensajeUI(
-        id: DateTime.now().millisecondsSinceEpoch.toString(),
-        esUsuario: false,
-        texto: '''
+    final mensajeInicial = MensajeUI(
+      id: DateTime.now().millisecondsSinceEpoch.toString(),
+      esUsuario: false,
+      texto: '''
 ¡Hola **$nombreEstudiante**! 👋 Soy tu tutor de **Secundaria**.
 
 - Hoy exploraremos juntos: **${widget.seccion.titulo}** (*${widget.unidad.asignatura} - ${widget.grado.nombre}*).
@@ -173,9 +183,11 @@ He adaptado mis explicaciones para ti con tu estilo preferido: **${widget.perfil
 
 ¿Qué duda tienes sobre este tema? Puedes escribirla o seleccionar una de las preguntas sugeridas.
 ''',
-        hora: horaActual,
-      ),
+      hora: horaActual,
     );
+
+    _mensajes.add(mensajeInicial);
+    _historialMensajes[widget.seccion.id] = List.from(_mensajes);
   }
 
   String _formatearHora() {
@@ -264,6 +276,7 @@ He adaptado mis explicaciones para ti con tu estilo preferido: **${widget.perfil
         );
         _textoEnCurso = '';
         _estaCargando = false;
+        _historialMensajes[widget.seccion.id] = List.from(_mensajes);
       });
     } catch (e) {
       if (!mounted) return;
@@ -283,6 +296,7 @@ He adaptado mis explicaciones para ti con tu estilo preferido: **${widget.perfil
           ),
         );
         _estaCargando = false;
+        _historialMensajes[widget.seccion.id] = List.from(_mensajes);
       });
     }
 
@@ -292,6 +306,7 @@ He adaptado mis explicaciones para ti con tu estilo preferido: **${widget.perfil
   void _reiniciarConversacion() {
     setState(() {
       _mensajes.clear();
+      _historialMensajes.remove(widget.seccion.id);
       _servicioGemini.reiniciarChat();
       _iniciarSesion();
     });
@@ -308,7 +323,6 @@ He adaptado mis explicaciones para ti con tu estilo preferido: **${widget.perfil
   @override
   Widget build(BuildContext context) {
     final tema = Theme.of(context);
-    // Una sola consulta al mapa (antes: containsKey + [] con '!', varias veces).
     final rangoLibro = paginasPorSeccion[widget.seccion.id];
 
     return Scaffold(
@@ -335,7 +349,7 @@ He adaptado mis explicaciones para ti con tu estilo preferido: **${widget.perfil
               overflow: TextOverflow.ellipsis,
             ),
             Text(
-              '${widget.unidad.asignatura} • ${widget.grado.nombre}',
+              '${widget.unidad.asignatura} - ${widget.grado.nombre}',
               style: TextStyle(
                 fontSize: 11,
                 color: Colors.white.withValues(alpha: 0.8),
@@ -380,7 +394,6 @@ He adaptado mis explicaciones para ti con tu estilo preferido: **${widget.perfil
                       final mensaje = _mensajes[index - 1];
                       return _construirBurbujaMensaje(mensaje, tema);
                     }
-                    // Solo esta burbuja se redibuja mientras llega la respuesta.
                     return ValueListenableBuilder<String>(
                       valueListenable: _textoEnCursoNotificador,
                       builder: (context, textoActual, _) {
@@ -466,7 +479,7 @@ He adaptado mis explicaciones para ti con tu estilo preferido: **${widget.perfil
                   'En tu libro de ${widget.grado.nombre}: ${rango.etiqueta}',
                   style: TextStyle(
                     fontSize: 12,
-                    fontWeight: FontWeight.w500,
+                    fontWeight: FontWeight.bold,
                     color: tema.colorScheme.onSurface,
                   ),
                 ),

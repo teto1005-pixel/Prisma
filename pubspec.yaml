@@ -1,7 +1,7 @@
 name: prisma_ia
 description: "Tutor inteligente con IA para estudiantes de secundaria en Nicaragua"
 publish_to: 'none'
-version: 1.2.0
+version: 1.3.0
 
 environment:
   sdk: '>=3.3.0 <4.0.0'

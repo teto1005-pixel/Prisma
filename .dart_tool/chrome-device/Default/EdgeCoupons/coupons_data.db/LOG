@@ -1,16 +1,16 @@
-2026/10/11-11:59:22.810 3340 Reusing MANIFEST C:\Users\ADMINI~1\AppData\Local\Temp\flutter_tools.23d1a52c\flutter_tools_chrome_device.382eb3f2\Default\EdgeCoupons/coupons_data.db/MANIFEST-000001
-2026/10/11-11:59:22.812 3340 Recovering log #29
-2026/10/11-11:59:22.813 3340 Reusing old log C:\Users\ADMINI~1\AppData\Local\Temp\flutter_tools.23d1a52c\flutter_tools_chrome_device.382eb3f2\Default\EdgeCoupons/coupons_data.db/000029.log 
-2026/10/11-11:59:22.813 3340 Delete type=0 #3
-2026/10/11-11:59:22.813 3340 Delete type=0 #4
-2026/10/11-11:59:22.813 3340 Delete type=0 #7
-2026/10/11-11:59:22.813 3340 Delete type=2 #8
-2026/10/11-11:59:22.813 3340 Delete type=0 #10
-2026/10/11-11:59:22.813 3340 Delete type=2 #11
-2026/10/11-11:59:22.813 3340 Delete type=0 #13
-2026/10/11-11:59:22.841 3340 Delete type=2 #14
-2026/10/11-11:59:22.842 3340 Delete type=0 #16
-2026/10/11-11:59:22.847 3340 Delete type=2 #17
-2026/10/11-11:59:22.848 3340 Delete type=0 #19
-2026/10/11-11:59:22.873 3340 Delete type=0 #23
-2026/10/11-11:59:22.946 3340 Delete type=0 #26
+2026/10/11-12:12:17.595 1ef0 Reusing MANIFEST C:\Users\ADMINI~1\AppData\Local\Temp\flutter_tools.245fe8ea\flutter_tools_chrome_device.152b7756\Default\EdgeCoupons/coupons_data.db/MANIFEST-000001
+2026/10/11-12:12:18.410 1ef0 Recovering log #29
+2026/10/11-12:12:18.411 1ef0 Reusing old log C:\Users\ADMINI~1\AppData\Local\Temp\flutter_tools.245fe8ea\flutter_tools_chrome_device.152b7756\Default\EdgeCoupons/coupons_data.db/000029.log 
+2026/10/11-12:12:18.416 1ef0 Delete type=0 #3
+2026/10/11-12:12:18.416 1ef0 Delete type=0 #4
+2026/10/11-12:12:18.416 1ef0 Delete type=0 #7
+2026/10/11-12:12:18.416 1ef0 Delete type=2 #8
+2026/10/11-12:12:18.416 1ef0 Delete type=0 #10
+2026/10/11-12:12:18.416 1ef0 Delete type=2 #11
+2026/10/11-12:12:18.416 1ef0 Delete type=0 #13
+2026/10/11-12:12:18.878 1ef0 Delete type=2 #14
+2026/10/11-12:12:19.056 1ef0 Delete type=0 #16
+2026/10/11-12:12:19.240 1ef0 Delete type=2 #17
+2026/10/11-12:12:19.280 1ef0 Delete type=0 #19
+2026/10/11-12:12:19.307 1ef0 Delete type=0 #23
+2026/10/11-12:12:19.313 1ef0 Delete type=0 #26

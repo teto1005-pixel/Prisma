@@ -75,8 +75,49 @@ class _EnrutadorSecundariaIAState extends State<EnrutadorSecundariaIA> {
         listaGrados.first;
   }
 
+  /// Determina si el botón nativo debe cerrar la app (true) o ser interceptado (false)
+  bool _puedeSalirDeApp() {
+    return _perfil.estaCompletado &&
+        !_esModoEdicionPerfil &&
+        _seccionSeleccionada == null &&
+        _unidadSeleccionada == null &&
+        _pestana == 0;
+  }
+
+  /// Maneja la acción del botón de regresar nativo de Android/iOS
+  void _manejarBotonAtras() {
+    if (_seccionSeleccionada != null) {
+      setState(() {
+        _seccionSeleccionada = null;
+      });
+    } else if (_unidadSeleccionada != null) {
+      setState(() {
+        _unidadSeleccionada = null;
+      });
+    } else if (_esModoEdicionPerfil) {
+      setState(() {
+        _esModoEdicionPerfil = false;
+      });
+    } else if (_pestana != 0) {
+      setState(() {
+        _pestana = 0;
+      });
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
+    return PopScope(
+      canPop: _puedeSalirDeApp(),
+      onPopInvokedWithResult: (didPop, result) {
+        if (didPop) return;
+        _manejarBotonAtras();
+      },
+      child: _construirPantallaActual(context),
+    );
+  }
+
+  Widget _construirPantallaActual(BuildContext context) {
     if (!_perfil.estaCompletado || _esModoEdicionPerfil) {
       return PantallaFormulario(
         perfilActual: _perfil,
@@ -97,6 +138,7 @@ class _EnrutadorSecundariaIAState extends State<EnrutadorSecundariaIA> {
 
     if (_seccionSeleccionada != null && _unidadSeleccionada != null) {
       return PantallaChatTutor(
+        key: ValueKey(_seccionSeleccionada!.id), // Mantiene la sesión mientras sea la misma sección
         grado: gradoActual,
         unidad: _unidadSeleccionada!,
         seccion: _seccionSeleccionada!,
