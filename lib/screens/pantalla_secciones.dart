@@ -5,6 +5,16 @@ import '../data/paginas_libros.dart';
 import '../models/estructura_academica.dart';
 import 'pantalla_libro.dart';
 
+/// Sombra suave de las tarjetas (equivale a Colors.black con alpha 0.04).
+/// Al ser const no se recrea en cada rebuild.
+const List<BoxShadow> _sombraTarjeta = [
+  BoxShadow(
+    color: Color(0x0A000000),
+    blurRadius: 10,
+    offset: Offset(0, 4),
+  ),
+];
+
 /// Pantalla que desglosa las secciones temáticas de una unidad para iniciar la sesión de IA.
 class PantallaSecciones extends StatelessWidget {
   final Grado grado;
@@ -130,123 +140,145 @@ class PantallaSecciones extends StatelessWidget {
 
               // --- LISTA DE TARJETAS DE SECCIONES REDONDEADAS ---
               ...unidad.secciones.map((Seccion seccion) {
-                return Container(
-                  margin: const EdgeInsets.only(bottom: 16),
-                  decoration: BoxDecoration(
-                    color: tema.colorScheme.surface,
-                    borderRadius: BorderRadius.circular(20),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withValues(alpha: 0.04),
-                        blurRadius: 10,
-                        offset: const Offset(0, 4),
-                      ),
-                    ],
-                  ),
-                  child: Padding(
-                    padding: const EdgeInsets.all(18),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          seccion.titulo,
-                          style: TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.bold,
-                            color: tema.colorScheme.onSurface,
-                          ),
-                        ),
-                        const SizedBox(height: 4),
-                        Text(
-                          seccion.descripcionCorta,
-                          style: TextStyle(
-                            fontSize: 13,
-                            color: tema.colorScheme.onSurfaceVariant,
-                          ),
-                        ),
-                        const SizedBox(height: 12),
-                        Text(
-                          'Conceptos Clave:',
-                          style: TextStyle(
-                            fontSize: 11,
-                            fontWeight: FontWeight.bold,
-                            color: tema.colorScheme.primary,
-                          ),
-                        ),
-                        const SizedBox(height: 6),
-                        Wrap(
-                          spacing: 6,
-                          runSpacing: 6,
-                          children: seccion.conceptosClave.map((concepto) {
-                            return Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                              decoration: BoxDecoration(
-                                color: tema.colorScheme.surfaceContainerHighest.withValues(alpha: 0.6),
-                                borderRadius: BorderRadius.circular(8),
-                              ),
-                              child: Text(
-                                concepto,
-                                style: TextStyle(
-                                  fontSize: 11,
-                                  fontWeight: FontWeight.w500,
-                                  color: tema.colorScheme.onSurfaceVariant,
-                                ),
-                              ),
-                            );
-                          }).toList(),
-                        ),
-                        const SizedBox(height: 16),
-                        SizedBox(
-                          width: double.infinity,
-                          height: 44,
-                          child: ElevatedButton.icon(
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: tema.colorScheme.primary,
-                              foregroundColor: Colors.white,
-                              elevation: 0,
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(14),
-                              ),
-                            ),
-                            onPressed: () => onSeleccionarSeccion(seccion),
-                            icon: const Icon(Icons.auto_awesome, size: 18),
-                            label: const Text(
-                              'Iniciar Tutoría con IA',
-                              style: TextStyle(
-                                fontWeight: FontWeight.bold,
-                                fontSize: 13,
-                              ),
-                            ),
-                          ),
-                        ),
-                        if (paginasPorSeccion.containsKey(seccion.id)) ...[
-                          const SizedBox(height: 8),
-                          SizedBox(
-                            width: double.infinity,
-                            child: TextButton.icon(
-                              style: TextButton.styleFrom(
-                                foregroundColor: tema.colorScheme.primary,
-                              ),
-                              onPressed: () => abrirLibro(
-                                context,
-                                grado: grado,
-                                seccion: seccion,
-                              ),
-                              icon: const Icon(Icons.menu_book_outlined, size: 18),
-                              label: Text(
-                                'Ver en el libro (${paginasPorSeccion[seccion.id]!.etiqueta})',
-                                style: const TextStyle(fontSize: 12),
-                              ),
-                            ),
-                          ),
-                        ],
-                      ],
-                    ),
-                  ),
+                return _TarjetaSeccion(
+                  grado: grado,
+                  seccion: seccion,
+                  onIniciar: () => onSeleccionarSeccion(seccion),
                 );
               }),
             ],
           ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Tarjeta individual de una sección temática.
+class _TarjetaSeccion extends StatelessWidget {
+  final Grado grado;
+  final Seccion seccion;
+  final VoidCallback onIniciar;
+
+  const _TarjetaSeccion({
+    super.key,
+    required this.grado,
+    required this.seccion,
+    required this.onIniciar,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final tema = Theme.of(context);
+    // Una sola consulta al mapa (antes: containsKey + [] con '!').
+    final paginaLibro = paginasPorSeccion[seccion.id];
+    final colorChip = tema.colorScheme.surfaceContainerHighest.withValues(alpha: 0.6);
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 16),
+      decoration: BoxDecoration(
+        color: tema.colorScheme.surface,
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: _sombraTarjeta,
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(18),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              seccion.titulo,
+              style: TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.bold,
+                color: tema.colorScheme.onSurface,
+              ),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              seccion.descripcionCorta,
+              style: TextStyle(
+                fontSize: 13,
+                color: tema.colorScheme.onSurfaceVariant,
+              ),
+            ),
+            const SizedBox(height: 12),
+            Text(
+              'Conceptos Clave:',
+              style: TextStyle(
+                fontSize: 11,
+                fontWeight: FontWeight.bold,
+                color: tema.colorScheme.primary,
+              ),
+            ),
+            const SizedBox(height: 6),
+            Wrap(
+              spacing: 6,
+              runSpacing: 6,
+              children: seccion.conceptosClave.map((concepto) {
+                return Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: colorChip,
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Text(
+                    concepto,
+                    style: TextStyle(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w500,
+                      color: tema.colorScheme.onSurfaceVariant,
+                    ),
+                  ),
+                );
+              }).toList(),
+            ),
+            const SizedBox(height: 16),
+            SizedBox(
+              width: double.infinity,
+              height: 44,
+              child: ElevatedButton.icon(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: tema.colorScheme.primary,
+                  foregroundColor: Colors.white,
+                  elevation: 0,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(14),
+                  ),
+                ),
+                onPressed: onIniciar,
+                icon: const Icon(Icons.auto_awesome, size: 18),
+                label: const Text(
+                  'Iniciar Tutoría con IA',
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 13,
+                  ),
+                ),
+              ),
+            ),
+            if (paginaLibro != null) ...[
+              const SizedBox(height: 8),
+              SizedBox(
+                width: double.infinity,
+                child: TextButton.icon(
+                  style: TextButton.styleFrom(
+                    foregroundColor: tema.colorScheme.primary,
+                  ),
+                  onPressed: () => abrirLibro(
+                    context,
+                    grado: grado,
+                    seccion: seccion,
+                  ),
+                  icon: const Icon(Icons.menu_book_outlined, size: 18),
+                  label: Text(
+                    'Ver en el libro (${paginaLibro.etiqueta})',
+                    style: const TextStyle(fontSize: 12),
+                  ),
+                ),
+              ),
+            ],
+          ],
         ),
       ),
     );

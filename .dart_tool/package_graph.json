@@ -8,7 +8,6 @@
       "version": "1.2.0",
       "dependencies": [
         "flutter",
-        "flutter_markdown",
         "google_generative_ai",
         "gpt_markdown",
         "http",
@@ -110,16 +109,6 @@
         "val_highlight",
         "val_highlight_flutter",
         "val_latex_flutter"
-      ]
-    },
-    {
-      "name": "flutter_markdown",
-      "version": "0.7.7+1",
-      "dependencies": [
-        "flutter",
-        "markdown",
-        "meta",
-        "path"
       ]
     },
     {
@@ -463,14 +452,6 @@
       "dependencies": [
         "flutter",
         "val_latex"
-      ]
-    },
-    {
-      "name": "markdown",
-      "version": "7.3.1",
-      "dependencies": [
-        "args",
-        "meta"
       ]
     },
     {

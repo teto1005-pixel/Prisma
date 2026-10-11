@@ -4,6 +4,16 @@ import 'package:flutter/material.dart';
 import '../data/datos_curriculo.dart';
 import '../models/estructura_academica.dart';
 
+/// Sombra suave de las tarjetas (equivale a Colors.black con alpha 0.04).
+/// Al ser const no se recrea en cada rebuild.
+const List<BoxShadow> _sombraTarjeta = [
+  BoxShadow(
+    color: Color(0x0A000000),
+    blurRadius: 10,
+    offset: Offset(0, 4),
+  ),
+];
+
 /// Pantalla que presenta las unidades con diseño moderno, tarjetas redondeadas
 /// y colores alineados al tema principal.
 class PantallaUnidades extends StatefulWidget {
@@ -169,78 +179,9 @@ class _PantallaUnidadesState extends State<PantallaUnidades> {
 
               // --- LISTA DE TARJETAS REDONDEADAS ---
               ...unidadesFiltradas.map((Unidad unidad) {
-                return Container(
-                  margin: const EdgeInsets.only(bottom: 12),
-                  decoration: BoxDecoration(
-                    color: tema.colorScheme.surface,
-                    borderRadius: BorderRadius.circular(20),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withValues(alpha: 0.04),
-                        blurRadius: 10,
-                        offset: const Offset(0, 4),
-                      ),
-                    ],
-                  ),
-                  child: Material(
-                    color: Colors.transparent,
-                    borderRadius: BorderRadius.circular(20),
-                    child: InkWell(
-                      borderRadius: BorderRadius.circular(20),
-                      onTap: () => widget.onSeleccionarUnidad(unidad),
-                      child: Padding(
-                        padding: const EdgeInsets.all(18),
-                        child: Row(
-                          crossAxisAlignment: CrossAxisAlignment.center,
-                          children: [
-                            Container(
-                              width: 48,
-                              height: 48,
-                              decoration: BoxDecoration(
-                                color: tema.colorScheme.primaryContainer.withValues(alpha: 0.6),
-                                borderRadius: BorderRadius.circular(14),
-                              ),
-                              child: Icon(
-                                _resolverIcono(unidad.icono),
-                                color: tema.colorScheme.primary,
-                                size: 24,
-                              ),
-                            ),
-                            const SizedBox(width: 14),
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    unidad.titulo,
-                                    style: TextStyle(
-                                      fontSize: 15,
-                                      fontWeight: FontWeight.bold,
-                                      color: tema.colorScheme.onSurface,
-                                      height: 1.2,
-                                    ),
-                                  ),
-                                  const SizedBox(height: 4),
-                                  Text(
-                                    '${unidad.secciones.length} temas clave con Tutor IA',
-                                    style: TextStyle(
-                                      fontSize: 12,
-                                      color: tema.colorScheme.onSurfaceVariant,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                            Icon(
-                              Icons.chevron_right_rounded,
-                              color: tema.colorScheme.onSurfaceVariant.withValues(alpha: 0.5),
-                              size: 22,
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ),
+                return _TarjetaUnidad(
+                  unidad: unidad,
+                  onTap: () => widget.onSeleccionarUnidad(unidad),
                 );
               }),
             ],
@@ -249,22 +190,108 @@ class _PantallaUnidadesState extends State<PantallaUnidades> {
       ),
     );
   }
+}
 
-  IconData _resolverIcono(String icono) {
-    switch (icono) {
-      case 'calculate':
-        return Icons.calculate_outlined;
-      case 'functions':
-        return Icons.functions_outlined;
-      case 'change_history':
-        return Icons.change_history_outlined;
-      case 'show_chart':
-        return Icons.show_chart_outlined;
-      case 'menu_book':
-      case 'auto_stories':
-        return Icons.auto_stories_outlined;
-      default:
-        return Icons.school_outlined;
-    }
+/// Tarjeta individual de una unidad. Al ser un widget aparte, Flutter puede
+/// reutilizarla y reconstruir solo lo necesario al cambiar el filtro.
+class _TarjetaUnidad extends StatelessWidget {
+  final Unidad unidad;
+  final VoidCallback onTap;
+
+  const _TarjetaUnidad({
+    super.key,
+    required this.unidad,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final tema = Theme.of(context);
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      decoration: BoxDecoration(
+        color: tema.colorScheme.surface,
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: _sombraTarjeta,
+      ),
+      child: Material(
+        color: Colors.transparent,
+        borderRadius: BorderRadius.circular(20),
+        child: InkWell(
+          borderRadius: BorderRadius.circular(20),
+          onTap: onTap,
+          child: Padding(
+            padding: const EdgeInsets.all(18),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                Container(
+                  width: 48,
+                  height: 48,
+                  decoration: BoxDecoration(
+                    color: tema.colorScheme.primaryContainer.withValues(alpha: 0.6),
+                    borderRadius: BorderRadius.circular(14),
+                  ),
+                  child: Icon(
+                    _resolverIcono(unidad.icono),
+                    color: tema.colorScheme.primary,
+                    size: 24,
+                  ),
+                ),
+                const SizedBox(width: 14),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        unidad.titulo,
+                        style: TextStyle(
+                          fontSize: 15,
+                          fontWeight: FontWeight.bold,
+                          color: tema.colorScheme.onSurface,
+                          height: 1.2,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        '${unidad.secciones.length} temas clave con Tutor IA',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: tema.colorScheme.onSurfaceVariant,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                Icon(
+                  Icons.chevron_right_rounded,
+                  color: tema.colorScheme.onSurfaceVariant.withValues(alpha: 0.5),
+                  size: 22,
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+IconData _resolverIcono(String icono) {
+  switch (icono) {
+    case 'calculate':
+      return Icons.calculate_outlined;
+    case 'functions':
+      return Icons.functions_outlined;
+    case 'change_history':
+      return Icons.change_history_outlined;
+    case 'show_chart':
+      return Icons.show_chart_outlined;
+    case 'menu_book':
+    case 'auto_stories':
+      return Icons.auto_stories_outlined;
+    default:
+      return Icons.school_outlined;
   }
 }

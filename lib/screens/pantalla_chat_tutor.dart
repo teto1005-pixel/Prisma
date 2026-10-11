@@ -10,6 +10,24 @@ import '../services/servicio_gemini.dart';
 import 'calculadora_cientifica.dart';
 import 'pantalla_libro.dart';
 
+/// Sombras const (equivalen a Colors.black con alpha 0.03 y 0.04).
+/// Al ser const no se recrean en cada rebuild.
+const List<BoxShadow> _sombraBurbuja = [
+  BoxShadow(
+    color: Color(0x08000000),
+    blurRadius: 8,
+    offset: Offset(0, 2),
+  ),
+];
+
+const List<BoxShadow> _sombraIndicador = [
+  BoxShadow(
+    color: Color(0x0A000000),
+    blurRadius: 6,
+    offset: Offset(0, 2),
+  ),
+];
+
 /// Modelo interno para gestionar los mensajes del chat interactivo.
 class MensajeUI {
   final String id;
@@ -49,6 +67,20 @@ class PantallaChatTutor extends StatefulWidget {
 }
 
 class _PantallaChatTutorState extends State<PantallaChatTutor> {
+  /// Expresión regular de _corregirLatex: se compila una sola vez
+  /// (antes se recompilaba en cada trozo recibido de la IA).
+  static final RegExp _regexLatexPegado = RegExp(
+    r'(\$[^\$\n]+?)([\,;\.\?]|(?:\s+antes|\s+decimos|\s+donde|\s+y\s+|\s+que\s+))',
+  );
+
+  /// Fórmula en línea $...$ (sin tocar los bloques $$...$$), en una sola línea.
+  static final RegExp _regexMatematicaEnLinea = RegExp(
+    r'(?<!\$)\$(?!\$)([^\$\n]+?)\$(?!\$)',
+  );
+
+  /// Contenido de una fórmula que empieza con un número.
+  static final RegExp _regexEmpiezaConDigito = RegExp(r'^\d');
+
   final TextEditingController _controladorTexto = TextEditingController();
   final ScrollController _scrollController = ScrollController();
   final ServicioGemini _servicioGemini = ServicioGemini();
@@ -56,6 +88,10 @@ class _PantallaChatTutorState extends State<PantallaChatTutor> {
   final List<MensajeUI> _mensajes = [];
   bool _estaCargando = false;
   String _textoEnCurso = '';
+
+  /// Replica _textoEnCurso para redibujar solo la burbuja que se está
+  /// transmitiendo, sin reconstruir toda la lista de mensajes.
+  final ValueNotifier<String> _textoEnCursoNotificador = ValueNotifier<String>('');
 
   @override
   void initState() {
@@ -67,22 +103,50 @@ class _PantallaChatTutorState extends State<PantallaChatTutor> {
   String _corregirLatex(String texto) {
     if (texto.isEmpty) return texto;
 
-    String resultado = texto;
+    return texto.split('\n').map((linea) {
+      var resultado = linea;
 
-    // Repara casos como $3^2 + 4^2$ o expresiones donde la IA no cierra $ antes de comas, puntos o signos ?
-    resultado = resultado.replaceAllMapped(
-      RegExp(r'(\$[^\$\n]+?)([\,;\.\?]|(?:\s+antes|\s+decimos|\s+donde|\s+y\s+|\s+que\s+))'),
-          (match) {
-        String bloque = match.group(1)!;
-        String seguido = match.group(2)!;
-        if (!bloque.endsWith(r'$')) {
-          return '$bloque\$$seguido';
-        }
-        return match.group(0)!;
-      },
-    );
+      // 1) Si los $ de la línea vienen en pares, el LaTeX ya está bien cerrado:
+      // no se toca. Antes se insertaban $ de más (por ejemplo en "$2^5$) y ...")
+      // y la fórmula se mostraba como código.
+      if (!'\$'.allMatches(resultado).length.isEven) {
+        resultado = resultado.replaceAllMapped(
+          _regexLatexPegado,
+              (match) {
+            String bloque = match.group(1)!;
+            String seguido = match.group(2)!;
+            if (!bloque.endsWith(r'$')) {
+              return '$bloque\$$seguido';
+            }
+            return match.group(0)!;
+          },
+        );
+      }
 
-    return resultado;
+      // 2) gpt_markdown no reconoce como fórmula un "$" seguido de un número
+      // (ej. "$3, 6, 9$"). Un espacio fino "\," al inicio lo soluciona y no
+      // cambia cómo se ve la fórmula.
+      return resultado.replaceAllMapped(
+        _regexMatematicaEnLinea,
+            (match) {
+          final contenido = match.group(1)!;
+          if (_regexEmpiezaConDigito.hasMatch(contenido)) {
+            return '\$\\,$contenido\$';
+          }
+          return match.group(0)!;
+        },
+      );
+    }).join('\n');
+  }
+
+  /// Actualiza el texto de la respuesta en transmisión. Solo reconstruye la
+  /// pantalla completa cuando la burbuja aparece o desaparece; mientras llegan
+  /// trozos únicamente se redibuja la burbuja en curso.
+  void _actualizarTextoEnCurso(String nuevo) {
+    final cambiaVisibilidad = _textoEnCurso.isEmpty != nuevo.isEmpty;
+    _textoEnCurso = nuevo;
+    _textoEnCursoNotificador.value = nuevo;
+    if (cambiaVisibilidad) setState(() {});
   }
 
   void _iniciarSesion() {
@@ -174,7 +238,7 @@ He adaptado mis explicaciones para ti con tu estilo preferido: **${widget.perfil
 
         if (trozo == '[REINICIAR_RESPUESTA]') {
           buffer.clear();
-          setState(() => _textoEnCurso = '');
+          _actualizarTextoEnCurso('');
           continue;
         }
 
@@ -182,12 +246,13 @@ He adaptado mis explicaciones para ti con tu estilo preferido: **${widget.perfil
 
         if (reloj.elapsedMilliseconds >= 80) {
           reloj.reset();
-          setState(() => _textoEnCurso = _corregirLatex(buffer.toString()));
+          _actualizarTextoEnCurso(_corregirLatex(buffer.toString()));
           _seguirAlFinal();
         }
       }
 
       if (!mounted) return;
+      _textoEnCursoNotificador.value = '';
       setState(() {
         _mensajes.add(
           MensajeUI(
@@ -205,6 +270,7 @@ He adaptado mis explicaciones para ti con tu estilo preferido: **${widget.perfil
       final mensajeError = e is ErrorServicioGemini
           ? e.mensaje
           : 'Ocurrió un problema inesperado.';
+      _textoEnCursoNotificador.value = '';
       setState(() {
         _textoEnCurso = '';
         _mensajes.add(
@@ -235,17 +301,24 @@ He adaptado mis explicaciones para ti con tu estilo preferido: **${widget.perfil
   void dispose() {
     _controladorTexto.dispose();
     _scrollController.dispose();
+    _textoEnCursoNotificador.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
     final tema = Theme.of(context);
+    // Una sola consulta al mapa (antes: containsKey + [] con '!', varias veces).
+    final rangoLibro = paginasPorSeccion[widget.seccion.id];
 
     return Scaffold(
+      backgroundColor: tema.colorScheme.surfaceContainerLowest,
       appBar: AppBar(
+        elevation: 0,
+        backgroundColor: tema.colorScheme.primary,
+        foregroundColor: Colors.white,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back),
+          icon: const Icon(Icons.arrow_back, color: Colors.white),
           onPressed: widget.onVolver,
         ),
         title: Column(
@@ -253,20 +326,27 @@ He adaptado mis explicaciones para ti con tu estilo preferido: **${widget.perfil
           children: [
             Text(
               widget.seccion.titulo,
-              style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+              style: const TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.bold,
+                color: Colors.white,
+              ),
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
             ),
             Text(
-              '${widget.unidad.asignatura} - ${widget.grado.nombre}',
-              style: TextStyle(fontSize: 11, color: tema.colorScheme.onSurfaceVariant),
+              '${widget.unidad.asignatura} • ${widget.grado.nombre}',
+              style: TextStyle(
+                fontSize: 11,
+                color: Colors.white.withValues(alpha: 0.8),
+              ),
             ),
           ],
         ),
         actions: [
-          if (paginasPorSeccion.containsKey(widget.seccion.id))
+          if (rangoLibro != null)
             IconButton(
-              icon: const Icon(Icons.menu_book),
+              icon: const Icon(Icons.menu_book, color: Colors.white),
               tooltip: 'Ver en el libro',
               onPressed: () => abrirLibro(
                 context,
@@ -275,7 +355,7 @@ He adaptado mis explicaciones para ti con tu estilo preferido: **${widget.perfil
               ),
             ),
           IconButton(
-            icon: const Icon(Icons.refresh),
+            icon: const Icon(Icons.refresh, color: Colors.white),
             tooltip: 'Reiniciar conversación',
             onPressed: _estaCargando ? null : _reiniciarConversacion,
           ),
@@ -286,12 +366,11 @@ He adaptado mis explicaciones para ti con tu estilo preferido: **${widget.perfil
           constraints: const BoxConstraints(maxWidth: 800),
           child: Column(
             children: [
-              if (paginasPorSeccion.containsKey(widget.seccion.id))
-                _construirBannerLibro(tema, paginasPorSeccion[widget.seccion.id]!),
+              if (rangoLibro != null) _construirBannerLibro(tema, rangoLibro),
               Expanded(
                 child: ListView.builder(
                   controller: _scrollController,
-                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
                   itemCount: _mensajes.length + 1 + (_textoEnCurso.isNotEmpty ? 1 : 0),
                   itemBuilder: (context, index) {
                     if (index == 0) {
@@ -301,15 +380,21 @@ He adaptado mis explicaciones para ti con tu estilo preferido: **${widget.perfil
                       final mensaje = _mensajes[index - 1];
                       return _construirBurbujaMensaje(mensaje, tema);
                     }
-                    return _construirBurbujaMensaje(
-                      MensajeUI(
-                        id: 'respuesta_en_curso',
-                        esUsuario: false,
-                        texto: _textoEnCurso,
-                        hora: _formatearHora(),
-                      ),
-                      tema,
-                      transmitiendo: true,
+                    // Solo esta burbuja se redibuja mientras llega la respuesta.
+                    return ValueListenableBuilder<String>(
+                      valueListenable: _textoEnCursoNotificador,
+                      builder: (context, textoActual, _) {
+                        return _construirBurbujaMensaje(
+                          MensajeUI(
+                            id: 'respuesta_en_curso',
+                            esUsuario: false,
+                            texto: textoActual,
+                            hora: _formatearHora(),
+                          ),
+                          tema,
+                          transmitiendo: true,
+                        );
+                      },
                     );
                   },
                 ),
@@ -321,10 +406,11 @@ He adaptado mis explicaciones para ti con tu estilo preferido: **${widget.perfil
                   child: Row(
                     children: [
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
                         decoration: BoxDecoration(
-                          color: tema.colorScheme.surfaceContainerHighest,
+                          color: tema.colorScheme.surface,
                           borderRadius: BorderRadius.circular(16),
+                          boxShadow: _sombraIndicador,
                         ),
                         child: Row(
                           children: [
@@ -336,10 +422,14 @@ He adaptado mis explicaciones para ti con tu estilo preferido: **${widget.perfil
                                 color: tema.colorScheme.primary,
                               ),
                             ),
-                            const SizedBox(width: 8),
+                            const SizedBox(width: 10),
                             Text(
                               'Prisma está pensando...',
-                              style: TextStyle(fontSize: 12, color: tema.colorScheme.onSurfaceVariant),
+                              style: TextStyle(
+                                fontSize: 12,
+                                fontWeight: FontWeight.w500,
+                                color: tema.colorScheme.onSurfaceVariant,
+                              ),
                             ),
                           ],
                         ),
@@ -358,7 +448,7 @@ He adaptado mis explicaciones para ti con tu estilo preferido: **${widget.perfil
 
   Widget _construirBannerLibro(ThemeData tema, RangoPaginas rango) {
     return Material(
-      color: tema.colorScheme.secondaryContainer.withOpacity(0.5),
+      color: tema.colorScheme.primaryContainer.withValues(alpha: 0.3),
       child: InkWell(
         onTap: () => abrirLibro(
           context,
@@ -369,14 +459,15 @@ He adaptado mis explicaciones para ti con tu estilo preferido: **${widget.perfil
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
           child: Row(
             children: [
-              Icon(Icons.menu_book, size: 16, color: tema.colorScheme.onSecondaryContainer),
+              Icon(Icons.menu_book, size: 16, color: tema.colorScheme.primary),
               const SizedBox(width: 8),
               Expanded(
                 child: Text(
                   'En tu libro de ${widget.grado.nombre}: ${rango.etiqueta}',
                   style: TextStyle(
                     fontSize: 12,
-                    color: tema.colorScheme.onSecondaryContainer,
+                    fontWeight: FontWeight.w500,
+                    color: tema.colorScheme.onSurface,
                   ),
                 ),
               ),
@@ -411,19 +502,27 @@ He adaptado mis explicaciones para ti con tu estilo preferido: **${widget.perfil
               color: tema.colorScheme.primary,
             ),
           ),
-          const SizedBox(height: 6),
+          const SizedBox(height: 8),
           Wrap(
-            spacing: 6,
-            runSpacing: 6,
+            spacing: 8,
+            runSpacing: 8,
             children: widget.seccion.preguntasSugeridas.map((sug) {
               return ActionChip(
-                label: Text(sug, style: const TextStyle(fontSize: 11)),
+                label: Text(sug, style: const TextStyle(fontSize: 12)),
                 onPressed: () => _enviarPregunta(sug),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                backgroundColor: tema.colorScheme.surface,
+                labelStyle: TextStyle(color: tema.colorScheme.onSurface),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(16),
+                  side: BorderSide(
+                    color: tema.colorScheme.outlineVariant.withValues(alpha: 0.5),
+                  ),
+                ),
               );
             }).toList(),
           ),
-          const Divider(height: 20),
+          const SizedBox(height: 8),
+          Divider(color: tema.colorScheme.outlineVariant.withValues(alpha: 0.4)),
         ],
       ),
     );
@@ -437,7 +536,7 @@ He adaptado mis explicaciones para ti con tu estilo preferido: **${widget.perfil
     final esUsuario = mensaje.esUsuario;
 
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 5),
+      padding: const EdgeInsets.symmetric(vertical: 6),
       child: Row(
         mainAxisAlignment: esUsuario ? MainAxisAlignment.end : MainAxisAlignment.start,
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -445,28 +544,31 @@ He adaptado mis explicaciones para ti con tu estilo preferido: **${widget.perfil
           if (!esUsuario)
             CircleAvatar(
               radius: 16,
-              backgroundColor: tema.colorScheme.primaryContainer,
+              backgroundColor: tema.colorScheme.primaryContainer.withValues(alpha: 0.6),
               child: Icon(Icons.auto_awesome, size: 16, color: tema.colorScheme.primary),
             ),
           if (!esUsuario) const SizedBox(width: 8),
           Flexible(
             child: Container(
-              padding: const EdgeInsets.all(12),
+              padding: const EdgeInsets.all(14),
               decoration: BoxDecoration(
                 color: esUsuario
                     ? tema.colorScheme.primary
                     : (mensaje.esError
                     ? tema.colorScheme.errorContainer
-                    : tema.colorScheme.surfaceContainerHighest.withOpacity(0.5)),
+                    : tema.colorScheme.surface),
                 borderRadius: BorderRadius.only(
-                  topLeft: const Radius.circular(16),
-                  topRight: const Radius.circular(16),
-                  bottomLeft: Radius.circular(esUsuario ? 16 : 4),
-                  bottomRight: Radius.circular(esUsuario ? 4 : 16),
+                  topLeft: const Radius.circular(18),
+                  topRight: const Radius.circular(18),
+                  bottomLeft: Radius.circular(esUsuario ? 18 : 4),
+                  bottomRight: Radius.circular(esUsuario ? 4 : 18),
                 ),
+                boxShadow: _sombraBurbuja,
                 border: Border.all(
-                  color: esUsuario ? Colors.transparent : tema.colorScheme.outlineVariant.withOpacity(0.5),
-                  width: 0.8,
+                  color: esUsuario
+                      ? Colors.transparent
+                      : tema.colorScheme.outlineVariant.withValues(alpha: 0.4),
+                  width: 1.0,
                 ),
               ),
               child: Column(
@@ -483,8 +585,10 @@ He adaptado mis explicaciones para ti con tu estilo preferido: **${widget.perfil
                       useDollarSignsForLatex: true,
                       style: TextStyle(
                         fontSize: 14,
-                        height: 1.4,
-                        color: mensaje.esError ? tema.colorScheme.onErrorContainer : tema.colorScheme.onSurface,
+                        height: 1.45,
+                        color: mensaje.esError
+                            ? tema.colorScheme.onErrorContainer
+                            : tema.colorScheme.onSurface,
                       ),
                     ),
                   const SizedBox(height: 6),
@@ -495,7 +599,9 @@ He adaptado mis explicaciones para ti con tu estilo preferido: **${widget.perfil
                         mensaje.hora,
                         style: TextStyle(
                           fontSize: 10,
-                          color: esUsuario ? Colors.white70 : tema.colorScheme.onSurfaceVariant,
+                          color: esUsuario
+                              ? Colors.white.withValues(alpha: 0.75)
+                              : tema.colorScheme.onSurfaceVariant,
                         ),
                       ),
                       if (!esUsuario && !mensaje.esError && !transmitiendo) ...[
@@ -510,7 +616,11 @@ He adaptado mis explicaciones para ti con tu estilo preferido: **${widget.perfil
                               ),
                             );
                           },
-                          child: Icon(Icons.copy, size: 13, color: tema.colorScheme.onSurfaceVariant),
+                          child: Icon(
+                            Icons.copy_rounded,
+                            size: 13,
+                            color: tema.colorScheme.onSurfaceVariant,
+                          ),
                         ),
                       ],
                     ],
@@ -546,17 +656,24 @@ He adaptado mis explicaciones para ti con tu estilo preferido: **${widget.perfil
   }
 
   Widget _construirBarraEntrada(ThemeData tema) {
+    final colorBorde = tema.colorScheme.outlineVariant.withValues(alpha: 0.4);
+
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       decoration: BoxDecoration(
         color: tema.colorScheme.surface,
-        border: Border(top: BorderSide(color: tema.colorScheme.outlineVariant, width: 0.5)),
+        border: Border(
+          top: BorderSide(
+            color: colorBorde,
+            width: 1.0,
+          ),
+        ),
       ),
       child: SafeArea(
         child: Row(
           children: [
             IconButton(
-              icon: const Icon(Icons.calculate_outlined),
+              icon: Icon(Icons.calculate_outlined, color: tema.colorScheme.primary),
               tooltip: 'Calculadora',
               onPressed: _abrirCalculadora,
             ),
@@ -565,9 +682,26 @@ He adaptado mis explicaciones para ti con tu estilo preferido: **${widget.perfil
                 controller: _controladorTexto,
                 decoration: InputDecoration(
                   hintText: 'Pregúntale al tutor sobre esta lección...',
+                  hintStyle: TextStyle(
+                    fontSize: 13,
+                    color: tema.colorScheme.onSurfaceVariant,
+                  ),
+                  filled: true,
+                  fillColor: tema.colorScheme.surfaceContainerHighest.withValues(alpha: 0.4),
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(24),
-                    borderSide: BorderSide(color: tema.colorScheme.outlineVariant),
+                    borderSide: BorderSide.none,
+                  ),
+                  enabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(24),
+                    borderSide: BorderSide(color: colorBorde),
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(24),
+                    borderSide: BorderSide(
+                      color: tema.colorScheme.primary,
+                      width: 1.5,
+                    ),
                   ),
                   contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
                 ),
@@ -578,10 +712,11 @@ He adaptado mis explicaciones para ti con tu estilo preferido: **${widget.perfil
             ),
             const SizedBox(width: 8),
             IconButton(
-              icon: const Icon(Icons.send),
+              icon: const Icon(Icons.send_rounded),
               style: IconButton.styleFrom(
                 backgroundColor: tema.colorScheme.primary,
                 foregroundColor: Colors.white,
+                elevation: 0,
               ),
               onPressed: _estaCargando ? null : () => _enviarPregunta(_controladorTexto.text),
             ),

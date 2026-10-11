@@ -5,7 +5,6 @@ import 'package:flutter/services.dart';
 import 'package:pdfrx/pdfrx.dart';
 
 /// Un PDF de formulario por grado. Las claves son los ids de `Grado`.
-/// Copia tus PDF a assets/pdf/ con estos nombres (o cambia los nombres aquí).
 const Map<String, String> pdfFormularioPorGrado = {
   '7mo': 'assets/pdf/formulario_7mo.pdf',
   '8vo': 'assets/pdf/formulario_8vo.pdf',
@@ -15,8 +14,7 @@ const Map<String, String> pdfFormularioPorGrado = {
 };
 
 /// Muestra el formulario (PDF) de cada grado para consulta de los estudiantes.
-/// Abre el del grado del estudiante y permite cambiar a los demás.
-/// Se puede hacer zoom con dos dedos y desplazarse hacia arriba y abajo.
+/// Se puede hacer zoom con dos dedos y desplazarse libremente hacia arriba y abajo.
 class PantallaFormulas extends StatefulWidget {
   const PantallaFormulas({super.key, this.gradoInicialId});
 
@@ -30,10 +28,12 @@ class PantallaFormulas extends StatefulWidget {
 
 class _PantallaFormulasState extends State<PantallaFormulas> {
   final List<String> _ids = pdfFormularioPorGrado.keys.toList();
+
+  /// Controladores creados bajo demanda: solo existen para los grados que
+  /// el estudiante realmente abre.
   final Map<String, PdfViewerController> _controladores = {};
 
-  /// Grados cuyo PDF ya se abrió: cada visor se crea al entrar por primera
-  /// vez y luego conserva la página en la que se quedó el estudiante.
+  /// Grados cuyo PDF ya se abrió.
   final Set<String> _visitados = {};
 
   late String _gradoId;
@@ -47,14 +47,10 @@ class _PantallaFormulasState extends State<PantallaFormulas> {
         ? inicial
         : _ids.first;
     _visitados.add(_gradoId);
-    for (final id in _ids) {
-      _controladores[id] = PdfViewerController();
-    }
     _disponibles = _leerDisponibles();
   }
 
-  /// Qué PDF están realmente incluidos en la app, para avisar con claridad
-  /// (y no mostrar una pantalla en blanco) si falta alguno.
+  /// Qué PDF están realmente incluidos en la app.
   Future<Set<String>> _leerDisponibles() async {
     try {
       final manifiesto = await AssetManifest.loadFromAssetBundle(rootBundle);
@@ -64,50 +60,8 @@ class _PantallaFormulasState extends State<PantallaFormulas> {
           if (incluidos.contains(e.value)) e.key,
       };
     } catch (_) {
-      return pdfFormularioPorGrado.keys.toSet(); // no se pudo comprobar: se intenta abrir
+      return pdfFormularioPorGrado.keys.toSet();
     }
-  }
-
-  Future<void> _irA(int pagina) async {
-    try {
-      await _controladores[_gradoId]?.goToPage(pageNumber: pagina);
-    } catch (_) {
-      // Si la página no existe o el PDF aún carga, se queda donde estaba.
-    }
-  }
-
-  Future<void> _preguntarPagina() async {
-    final campo = TextEditingController();
-    final texto = await showDialog<String>(
-      context: context,
-      builder: (contextoDialogo) {
-        return AlertDialog(
-          title: const Text('Ir a la página'),
-          content: TextField(
-            controller: campo,
-            autofocus: true,
-            keyboardType: TextInputType.number,
-            inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-            decoration: const InputDecoration(hintText: 'Número de página'),
-            onSubmitted: (valor) => Navigator.of(contextoDialogo).pop(valor),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(contextoDialogo).pop(),
-              child: const Text('Cancelar'),
-            ),
-            FilledButton(
-              onPressed: () => Navigator.of(contextoDialogo).pop(campo.text),
-              child: const Text('Ir'),
-            ),
-          ],
-        );
-      },
-    );
-    campo.dispose();
-
-    final pagina = int.tryParse(texto ?? '');
-    if (pagina != null && pagina >= 1) await _irA(pagina);
   }
 
   Widget _visor(String id, Set<String> disponibles, ThemeData tema) {
@@ -130,7 +84,7 @@ class _PantallaFormulasState extends State<PantallaFormulas> {
     return PdfViewer.asset(
       ruta,
       key: ValueKey(id),
-      controller: _controladores[id]!,
+      controller: _controladores.putIfAbsent(id, () => PdfViewerController()),
     );
   }
 
@@ -139,49 +93,63 @@ class _PantallaFormulasState extends State<PantallaFormulas> {
     final tema = Theme.of(context);
 
     return Scaffold(
+      backgroundColor: tema.colorScheme.surfaceContainerLowest,
       appBar: AppBar(
+        elevation: 0,
+        backgroundColor: tema.colorScheme.primary,
+        foregroundColor: Colors.white,
         title: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             const Text(
               'Formulario',
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+                color: Colors.white,
+              ),
             ),
             Text(
               'Fórmulas de matemáticas para consultar',
-              style: TextStyle(fontSize: 11, color: tema.colorScheme.onSurfaceVariant),
+              style: TextStyle(
+                fontSize: 11,
+                color: Colors.white.withValues(alpha: 0.8),
+              ),
             ),
           ],
         ),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.first_page),
-            tooltip: 'Primera página',
-            onPressed: () => _irA(1),
-          ),
-          IconButton(
-            icon: const Icon(Icons.pin_outlined),
-            tooltip: 'Ir a la página...',
-            onPressed: _preguntarPagina,
-          ),
-        ],
       ),
       body: Column(
         children: [
           Padding(
-            padding: const EdgeInsets.fromLTRB(12, 4, 12, 8),
+            padding: const EdgeInsets.fromLTRB(12, 10, 12, 8),
             child: SizedBox(
               width: double.infinity,
               child: SegmentedButton<String>(
                 showSelectedIcon: false,
+                style: SegmentedButton.styleFrom(
+                  selectedBackgroundColor: tema.colorScheme.primary,
+                  selectedForegroundColor: Colors.white,
+                  side: BorderSide(
+                    color: tema.colorScheme.outlineVariant.withValues(alpha: 0.5),
+                  ),
+                ),
                 segments: [
                   for (final id in _ids)
-                    ButtonSegment<String>(value: id, label: Text(id)),
+                    ButtonSegment<String>(
+                      value: id,
+                      label: Text(
+                        id,
+                        style: const TextStyle(fontWeight: FontWeight.bold),
+                      ),
+                    ),
                 ],
                 selected: {_gradoId},
                 onSelectionChanged: (seleccion) {
+                  final nuevoId = seleccion.first;
+                  if (nuevoId == _gradoId) return;
                   setState(() {
-                    _gradoId = seleccion.first;
+                    _gradoId = nuevoId;
                     _visitados.add(_gradoId);
                   });
                 },

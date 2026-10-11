@@ -116,12 +116,6 @@
       "languageVersion": "3.11"
     },
     {
-      "name": "flutter_markdown",
-      "rootUri": "file:///C:/Users/Administrador/AppData/Local/Pub/Cache/hosted/pub.dev/flutter_markdown-0.7.7+1",
-      "packageUri": "lib/",
-      "languageVersion": "3.4"
-    },
-    {
       "name": "flutter_test",
       "rootUri": "file:///C:/src/flutter/packages/flutter_test",
       "packageUri": "lib/",
@@ -228,12 +222,6 @@
       "rootUri": "file:///C:/Users/Administrador/AppData/Local/Pub/Cache/hosted/pub.dev/logging-1.3.0",
       "packageUri": "lib/",
       "languageVersion": "3.4"
-    },
-    {
-      "name": "markdown",
-      "rootUri": "file:///C:/Users/Administrador/AppData/Local/Pub/Cache/hosted/pub.dev/markdown-7.3.1",
-      "packageUri": "lib/",
-      "languageVersion": "3.9"
     },
     {
       "name": "matcher",

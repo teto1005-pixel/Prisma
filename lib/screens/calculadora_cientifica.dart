@@ -3,12 +3,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
+import '../services/editor_expresion.dart';
 import '../services/motor_calculadora.dart';
 
 /// Abre la calculadora como una hoja que sube desde abajo.
-///
-/// Si se pasa [alUsarResultado], aparece el botón "Usar en el chat": cierra la
-/// calculadora y entrega el resultado como texto (por ejemplo "3/4" o "2√3").
 Future<void> mostrarCalculadora(
     BuildContext context, {
       void Function(String texto)? alUsarResultado,
@@ -44,24 +42,14 @@ class CalculadoraCientifica extends StatefulWidget {
 }
 
 class _CalculadoraCientificaState extends State<CalculadoraCientifica> {
-  /// Textos de varias letras que se borran o se saltan de una sola vez.
-  static const List<String> _tokensLargos = [
-    'sin⁻¹(',
-    'cos⁻¹(',
-    'tan⁻¹(',
-    'logb(',
-    'sin(',
-    'cos(',
-    'tan(',
-    'log(',
-    'abs(',
-    'ln(',
-    'Ans',
-    'ˣ√',
-  ];
+  /// Tamaño de letra según qué tan adentro de una cajita se escribe.
+  static const List<double> _tamanos = [30, 24, 19, 15];
 
-  final TextEditingController _ctrl = TextEditingController();
-  final FocusNode _foco = FocusNode();
+  /// Lo que se está escribiendo (fracciones, raíces, etc. con sus cajitas).
+  final EditorExpresion _editor = EditorExpresion();
+
+  /// Para mantener a la vista el cursor cuando la expresión es larga.
+  final GlobalKey _claveCursor = GlobalKey();
 
   bool _grados = true;
   Valor? _ans;
@@ -70,71 +58,34 @@ class _CalculadoraCientificaState extends State<CalculadoraCientifica> {
   List<ModoResultado> _modos = const [];
   int _modoIdx = 0;
 
-  /// true justo después de "=": la siguiente tecla empieza una cuenta nueva
-  /// (o continúa con Ans si es un operador).
+  /// true justo después de "=": la siguiente tecla empieza una cuenta nueva.
   bool _trasResultado = false;
 
   ModoResultado get _modo =>
       _modos.isEmpty ? ModoResultado.decimal : _modos[_modoIdx];
 
-  @override
-  void dispose() {
-    _ctrl.dispose();
-    _foco.dispose();
-    super.dispose();
-  }
+  double _tamanoNivel(int nivel) => _tamanos[nivel.clamp(0, _tamanos.length - 1)];
 
   // ---------------------------------------------------------------- acciones
 
-  int _longitudAntes(String texto, int pos) {
-    for (final t in _tokensLargos) {
-      if (pos >= t.length && texto.substring(pos - t.length, pos) == t) {
-        return t.length;
-      }
-    }
-    return 1;
-  }
-
-  int _longitudDespues(String texto, int pos) {
-    for (final t in _tokensLargos) {
-      if (pos + t.length <= texto.length &&
-          texto.substring(pos, pos + t.length) == t) {
-        return t.length;
-      }
-    }
-    return 1;
-  }
-
-  void _insertar(String texto, {bool operador = false}) {
+  /// Aplica un cambio al editor. Si venimos de "=", empieza una cuenta nueva
+  /// (con Ans al inicio si la tecla es un operador).
+  void _aplicar(void Function() cambio, {bool operador = false}) {
     HapticFeedback.selectionClick();
     setState(() {
       if (_trasResultado) {
         _trasResultado = false;
-        if (operador) {
-          _ctrl.value = const TextEditingValue(
-            text: 'Ans',
-            selection: TextSelection.collapsed(offset: 3),
-          );
-        } else {
-          _ctrl.value = const TextEditingValue(
-            selection: TextSelection.collapsed(offset: 0),
-          );
-        }
+        _editor.limpiar();
+        if (operador) _editor.insertarSimbolo('Ans');
       }
       _valor = null;
       _error = null;
-
-      final actual = _ctrl.text;
-      final sel = _ctrl.selection;
-      final inicio = sel.isValid ? sel.start : actual.length;
-      final fin = sel.isValid ? sel.end : actual.length;
-      final nuevo = actual.replaceRange(inicio, fin, texto);
-      _ctrl.value = TextEditingValue(
-        text: nuevo,
-        selection: TextSelection.collapsed(offset: inicio + texto.length),
-      );
+      cambio();
     });
-    _foco.requestFocus();
+  }
+
+  void _insertar(String texto, {bool operador = false}) {
+    _aplicar(() => _editor.insertarSimbolo(texto), operador: operador);
   }
 
   void _borrar() {
@@ -143,56 +94,38 @@ class _CalculadoraCientificaState extends State<CalculadoraCientifica> {
       _trasResultado = false;
       _valor = null;
       _error = null;
-
-      final texto = _ctrl.text;
-      final sel = _ctrl.selection;
-      if (!sel.isValid) return;
-      if (!sel.isCollapsed) {
-        _ctrl.value = TextEditingValue(
-          text: texto.replaceRange(sel.start, sel.end, ''),
-          selection: TextSelection.collapsed(offset: sel.start),
-        );
-        return;
-      }
-      if (sel.start == 0) return;
-      final inicio = sel.start - _longitudAntes(texto, sel.start);
-      _ctrl.value = TextEditingValue(
-        text: texto.replaceRange(inicio, sel.start, ''),
-        selection: TextSelection.collapsed(offset: inicio),
-      );
+      _editor.borrar();
     });
-    _foco.requestFocus();
   }
 
   void _limpiarTodo() {
     HapticFeedback.selectionClick();
     setState(() {
-      _ctrl.value = const TextEditingValue();
+      _editor.limpiar();
       _valor = null;
       _error = null;
       _trasResultado = false;
     });
-    _foco.requestFocus();
   }
 
   void _mover(int direccion) {
     HapticFeedback.selectionClick();
-    _trasResultado = false;
-    final texto = _ctrl.text;
-    final pos = _ctrl.selection.isValid ? _ctrl.selection.baseOffset : texto.length;
-    var nueva = pos;
-    if (direccion < 0) {
-      if (pos > 0) nueva = pos - _longitudAntes(texto, pos);
-    } else {
-      if (pos < texto.length) nueva = pos + _longitudDespues(texto, pos);
-    }
-    _ctrl.selection = TextSelection.collapsed(offset: nueva);
-    _foco.requestFocus();
+    setState(() {
+      _trasResultado = false;
+      _editor.mover(direccion);
+    });
+  }
+
+  void _tocarRanura(Ranura ranura) {
+    setState(() {
+      _trasResultado = false;
+      _editor.irAlFinalDe(ranura);
+    });
   }
 
   void _evaluar() {
-    final texto = _ctrl.text;
-    if (texto.trim().isEmpty) return;
+    if (_editor.vacio) return;
+    final texto = _editor.aTexto();
     HapticFeedback.mediumImpact();
     try {
       final v = MotorCalculadora.evaluar(texto, ans: _ans, grados: _grados);
@@ -218,7 +151,6 @@ class _CalculadoraCientificaState extends State<CalculadoraCientifica> {
         _trasResultado = false;
       });
     }
-    _foco.requestFocus();
   }
 
   void _cambiarModo() {
@@ -299,22 +231,7 @@ class _CalculadoraCientificaState extends State<CalculadoraCientifica> {
               ),
             ],
           ),
-          TextField(
-            controller: _ctrl,
-            focusNode: _foco,
-            autofocus: true,
-            readOnly: true,
-            showCursor: true,
-            keyboardType: TextInputType.none,
-            maxLines: 1,
-            style: const TextStyle(fontSize: 26, fontWeight: FontWeight.w500),
-            decoration: const InputDecoration(
-              border: InputBorder.none,
-              hintText: '0',
-              isDense: true,
-              contentPadding: EdgeInsets.symmetric(vertical: 8),
-            ),
-          ),
+          SizedBox(height: 92, child: _construirExpresion(cs)),
           SizedBox(
             height: 76,
             child: Align(
@@ -327,6 +244,212 @@ class _CalculadoraCientificaState extends State<CalculadoraCientifica> {
       ),
     );
   }
+
+  // ------------------------------------------------- pantalla de expresión
+
+  Widget _construirExpresion(ColorScheme cs) {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final contexto = _claveCursor.currentContext;
+      if (mounted && contexto != null) {
+        Scrollable.ensureVisible(
+          contexto,
+          alignment: 0.5,
+          duration: const Duration(milliseconds: 80),
+        );
+      }
+    });
+
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTap: () => _tocarRanura(_editor.raiz),
+      child: Align(
+        alignment: Alignment.centerLeft,
+        child: SingleChildScrollView(
+          scrollDirection: Axis.horizontal,
+          child: _construirRanura(_editor.raiz, 0, cs),
+        ),
+      ),
+    );
+  }
+
+  /// Dibuja una cajita: sus nodos y, si el cursor está ahí, el cursor.
+  Widget _construirRanura(Ranura r, int nivel, ColorScheme cs) {
+    final tam = _tamanoNivel(nivel);
+    final activa = identical(r, _editor.actual);
+    final esRaiz = identical(r, _editor.raiz);
+
+    final hijos = <Widget>[];
+    for (var i = 0; i <= r.nodos.length; i++) {
+      if (activa && i == _editor.pos) {
+        hijos.add(_Cursor(key: _claveCursor, alto: tam * 1.25, color: cs.primary));
+      }
+      if (i < r.nodos.length) {
+        hijos.add(_construirNodo(r.nodos[i], nivel, cs));
+      }
+    }
+
+    if (esRaiz) {
+      if (r.vacia) {
+        hijos.add(Text('0', style: TextStyle(fontSize: tam, color: cs.outline)));
+      }
+      return Row(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: hijos,
+      );
+    }
+
+    final contenido = Row(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.center,
+      children: hijos,
+    );
+
+    // Cajita vacía: se dibuja el recuadro (□) para que se vea dónde escribir.
+    if (r.vacia) {
+      return GestureDetector(
+        onTap: () => _tocarRanura(r),
+        child: Container(
+          constraints: BoxConstraints(minWidth: tam * 0.75, minHeight: tam * 1.25),
+          alignment: Alignment.center,
+          decoration: BoxDecoration(
+            border: Border.all(
+              color: activa ? cs.primary : cs.outline,
+              width: 1.2,
+            ),
+            borderRadius: BorderRadius.circular(4),
+          ),
+          child: contenido,
+        ),
+      );
+    }
+
+    return GestureDetector(
+      behavior: HitTestBehavior.translucent,
+      onTap: () => _tocarRanura(r),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 2),
+        child: contenido,
+      ),
+    );
+  }
+
+  Widget _construirNodo(Nodo n, int nivel, ColorScheme cs) {
+    final tam = _tamanoNivel(nivel);
+    final estilo = TextStyle(
+      fontSize: tam,
+      fontWeight: FontWeight.w500,
+      color: cs.onSurface,
+    );
+    final sub = nivel + 1;
+
+    if (n is Simbolo) return Text(n.texto, style: estilo);
+
+    if (n is NodoFraccion) {
+      return Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 3),
+        child: IntrinsicWidth(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Center(child: _construirRanura(n.numerador, sub, cs)),
+              Container(
+                height: 1.6,
+                margin: const EdgeInsets.symmetric(vertical: 2),
+                color: cs.onSurface,
+              ),
+              Center(child: _construirRanura(n.denominador, sub, cs)),
+            ],
+          ),
+        ),
+      );
+    }
+
+    if (n is NodoPotencia) {
+      // Exponente arriba: una caja pequeña con un espacio debajo la sube.
+      return Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          _construirRanura(n.exponente, sub, cs),
+          SizedBox(height: tam * 0.6),
+        ],
+      );
+    }
+
+    if (n is NodoPotenciaCaja) {
+      return Row(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          _construirRanura(n.base, nivel, cs),
+          Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              _construirRanura(n.exponente, sub, cs),
+              SizedBox(height: tam * 0.6),
+            ],
+          ),
+        ],
+      );
+    }
+
+    if (n is NodoRaizCuadrada) {
+      return _dibujarRaiz(null, n.radicando, nivel, cs);
+    }
+
+    if (n is NodoRaizN) {
+      return _dibujarRaiz(n.indice, n.radicando, nivel, cs);
+    }
+
+    if (n is NodoLogBase) {
+      return Row(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          Text('log', style: estilo),
+          // Base abajo, como subíndice.
+          Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              SizedBox(height: tam * 0.6),
+              _construirRanura(n.base, sub, cs),
+            ],
+          ),
+          Text('(', style: estilo),
+          _construirRanura(n.argumento, nivel, cs),
+          Text(')', style: estilo),
+        ],
+      );
+    }
+
+    return const SizedBox.shrink();
+  }
+
+  Widget _dibujarRaiz(Ranura? indice, Ranura radicando, int nivel, ColorScheme cs) {
+    final tam = _tamanoNivel(nivel);
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.center,
+      children: [
+        if (indice != null)
+          Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              _construirRanura(indice, nivel + 1, cs),
+              SizedBox(height: tam * 0.55),
+            ],
+          ),
+        _Radical(
+          tam: tam,
+          color: cs.onSurface,
+          hijo: _construirRanura(radicando, nivel, cs),
+        ),
+      ],
+    );
+  }
+
+  // -------------------------------------------------------------- resultado
 
   Widget _construirResultado(ColorScheme cs) {
     final mensaje = _error;
@@ -367,16 +490,6 @@ class _CalculadoraCientificaState extends State<CalculadoraCientifica> {
             style: TextStyle(fontSize: 13, color: cs.onSurfaceVariant),
           ),
         ),
-        if (_modos.length > 1)
-          TextButton(
-            onPressed: _cambiarModo,
-            style: TextButton.styleFrom(
-              minimumSize: const Size(0, 30),
-              padding: const EdgeInsets.symmetric(horizontal: 10),
-              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-            ),
-            child: const Text('S⇔D'),
-          ),
         if (widget.alUsarResultado != null)
           FilledButton.tonal(
             onPressed: _usarEnChat,
@@ -393,12 +506,28 @@ class _CalculadoraCientificaState extends State<CalculadoraCientifica> {
 
   // ----------------------------------------------------------------- teclado
 
+  /// Tecla que escribe un texto simple (sin cajitas).
   VoidCallback _ins(String texto, {bool op = false}) {
     return () => _insertar(texto, operador: op);
   }
 
-  Widget _tecla(String etiqueta, _EstiloTecla estilo, VoidCallback alTocar) {
-    return _Tecla(etiqueta: etiqueta, estilo: estilo, alTocar: alTocar);
+  /// Tecla que crea una estructura con cajitas (fracción, raíz, log, potencia).
+  VoidCallback _est(void Function(EditorExpresion e) accion, {bool op = false}) {
+    return () => _aplicar(() => accion(_editor), operador: op);
+  }
+
+  Widget _tecla(
+      String etiqueta,
+      _EstiloTecla estilo,
+      VoidCallback alTocar, {
+        Widget? contenido,
+      }) {
+    return _Tecla(
+      etiqueta: etiqueta,
+      estilo: estilo,
+      alTocar: alTocar,
+      contenido: contenido,
+    );
   }
 
   Widget _fila(int peso, List<Widget> teclas) {
@@ -420,54 +549,60 @@ class _CalculadoraCientificaState extends State<CalculadoraCientifica> {
     final borrar = _EstiloTecla(cs.errorContainer, cs.onErrorContainer, 17, true);
     final igual = _EstiloTecla(cs.primary, cs.onPrimary, 24, true);
 
+    // Color de los íconos con cajitas (el mismo del texto de cada tipo de tecla).
+    final cFuncion = cs.onSurface;
+    final cOperador = cs.onSecondaryContainer;
+
     return Column(
       children: [
-        // ---- Funciones científicas
+        // ---- Funciones (mismo orden que la Casio)
         _fila(4, [
-          _tecla('x²', funcion, _ins('^2', op: true)),
-          _tecla('x^y', funcion, _ins('^', op: true)),
-          _tecla('√', funcion, _ins('√(')),
-          _tecla('ˣ√', funcion, _ins('ˣ√', op: true)),
-          _tecla('x⁻¹', funcion, _ins('^(−1)', op: true)),
+          _tecla('Abs', funcion, _ins('abs(')),
+          _tecla('x³', funcion, _est((e) => e.insertarPotenciaFija('3'), op: true)),
+          _tecla('◀', funcion, () => _mover(-1)),
+          _tecla('▶', funcion, () => _mover(1)),
+          _tecla('x⁻¹', funcion, _est((e) => e.insertarPotenciaFija('−1'), op: true)),
+          _tecla('logₐ', funcion, _est((e) => e.insertarLogBase()),
+              contenido: _iconoLogBase(cFuncion)),
         ]),
         _fila(4, [
-          _tecla('sin', funcion, _ins('sin(')),
-          _tecla('cos', funcion, _ins('cos(')),
-          _tecla('tan', funcion, _ins('tan(')),
-          _tecla('π', funcion, _ins('π')),
-          _tecla('e', funcion, _ins('e')),
-        ]),
-        _fila(4, [
-          _tecla('sin⁻¹', funcion, _ins('sin⁻¹(')),
-          _tecla('cos⁻¹', funcion, _ins('cos⁻¹(')),
-          _tecla('tan⁻¹', funcion, _ins('tan⁻¹(')),
+          _tecla('a/b', operador, _est((e) => e.insertarFraccion(), op: true),
+              contenido: _iconoFraccion(cOperador)),
+          _tecla('√', funcion, _est((e) => e.insertarRaizCuadrada()),
+              contenido: _iconoRaizCuadrada(cFuncion)),
+          _tecla('x²', funcion, _est((e) => e.insertarPotenciaFija('2'), op: true)),
+          _tecla('x^□', funcion, _est((e) => e.insertarPotencia(), op: true),
+              contenido: _iconoPotencia(cFuncion)),
           _tecla('log', funcion, _ins('log(')),
           _tecla('ln', funcion, _ins('ln(')),
         ]),
         _fila(4, [
-          _tecla('n!', funcion, _ins('!', op: true)),
-          _tecla('nPr', funcion, _ins('P', op: true)),
-          _tecla('nCr', funcion, _ins('C', op: true)),
-          _tecla('logₐ', funcion, _ins('logb(')),
-          _tecla('|x|', funcion, _ins('abs(')),
+          _tecla('ⁿ√x', funcion, _est((e) => e.insertarRaizN()),
+              contenido: _iconoRaizN(cFuncion)),
+          _tecla('(', operador, _ins('(')),
+          _tecla(')', operador, _ins(')')),
+          _tecla('sin', funcion, _ins('sin(')),
+          _tecla('cos', funcion, _ins('cos(')),
+          _tecla('tan', funcion, _ins('tan(')),
         ]),
         _fila(4, [
-          _tecla(',', funcion, _ins(',')),
+          _tecla('π', funcion, _ins('π')),
+          _tecla('e', funcion, _ins('e')),
+          _tecla('S⇔D', funcion, _cambiarModo),
+          _tecla('sin⁻¹', funcion, _ins('sin⁻¹(')),
+          _tecla('cos⁻¹', funcion, _ins('cos⁻¹(')),
+          _tecla('tan⁻¹', funcion, _ins('tan⁻¹(')),
+        ]),
+        _fila(4, [
+          _tecla('(−)', funcion, _ins('−')),
+          _tecla('n!', funcion, _ins('!', op: true)),
           _tecla('%', funcion, _ins('%', op: true)),
-          _tecla('x³', funcion, _ins('^3', op: true)),
-          _tecla('∛', funcion, _ins('∛(')),
-          _tecla(_grados ? 'DEG' : 'RAD', funcion, _alternarAngulo),
+          _tecla('nPr', funcion, _ins('P', op: true)),
+          _tecla('nCr', funcion, _ins('C', op: true)),
         ]),
         const SizedBox(height: 4),
 
         // ---- Teclado principal
-        _fila(5, [
-          _tecla('(', operador, _ins('(')),
-          _tecla(')', operador, _ins(')')),
-          _tecla('a/b', operador, _ins('/', op: true)),
-          _tecla('◀', funcion, () => _mover(-1)),
-          _tecla('▶', funcion, () => _mover(1)),
-        ]),
         _fila(5, [
           _tecla('7', numero, _ins('7')),
           _tecla('8', numero, _ins('8')),
@@ -492,7 +627,7 @@ class _CalculadoraCientificaState extends State<CalculadoraCientifica> {
         _fila(5, [
           _tecla('0', numero, _ins('0')),
           _tecla('.', numero, _ins('.')),
-          _tecla('×10ˣ', funcion, _ins('×10^(', op: true)),
+          _tecla('×10ˣ', funcion, _est((e) => e.insertarPorDiezA(), op: true)),
           _tecla('Ans', funcion, _ins('Ans')),
           _tecla('=', igual, _evaluar),
         ]),
@@ -504,6 +639,106 @@ class _CalculadoraCientificaState extends State<CalculadoraCientifica> {
 // ===========================================================================
 // Widgets de apoyo
 // ===========================================================================
+
+/// Cursor parpadeante.
+class _Cursor extends StatefulWidget {
+  const _Cursor({super.key, required this.alto, required this.color});
+
+  final double alto;
+  final Color color;
+
+  @override
+  State<_Cursor> createState() => _CursorState();
+}
+
+class _CursorState extends State<_Cursor> with SingleTickerProviderStateMixin {
+  late final AnimationController _anim = AnimationController(
+    vsync: this,
+    duration: const Duration(milliseconds: 530),
+  )..repeat(reverse: true);
+
+  @override
+  void dispose() {
+    _anim.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return FadeTransition(
+      opacity: Tween<double>(begin: 0.1, end: 1).animate(_anim),
+      child: Container(
+        width: 2,
+        height: widget.alto,
+        margin: const EdgeInsets.symmetric(horizontal: 1),
+        decoration: BoxDecoration(
+          color: widget.color,
+          borderRadius: BorderRadius.circular(1),
+        ),
+      ),
+    );
+  }
+}
+
+/// Radical dibujado de un solo trazo: gancho, bajada, subida y línea superior.
+/// El tamaño se ajusta solo al contenido que lleva adentro.
+class _Radical extends StatelessWidget {
+  const _Radical({required this.hijo, required this.color, required this.tam});
+
+  final Widget hijo;
+  final Color color;
+  final double tam;
+
+  @override
+  Widget build(BuildContext context) {
+    final anchoSigno = tam * 0.7;
+    return CustomPaint(
+      painter: _PintorRadical(color: color, anchoSigno: anchoSigno),
+      child: Padding(
+        padding: EdgeInsets.fromLTRB(anchoSigno + 2, 5, 4, 1),
+        child: hijo,
+      ),
+    );
+  }
+}
+
+class _PintorRadical extends CustomPainter {
+  const _PintorRadical({required this.color, required this.anchoSigno});
+
+  final Color color;
+  final double anchoSigno;
+
+  static const double _grosor = 1.6;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final a = anchoSigno;
+    final w = size.width;
+    final h = size.height;
+    const arriba = _grosor / 2 + 0.5;
+    final abajo = h - _grosor / 2;
+
+    final trazo = Path()
+      ..moveTo(0, h * 0.58) // inicio del gancho
+      ..lineTo(a * 0.28, h * 0.50) // gancho
+      ..lineTo(a * 0.55, abajo) // bajada hasta el vértice
+      ..lineTo(a, arriba) // subida larga
+      ..lineTo(w, arriba); // línea sobre el radicando
+
+    final pincel = Paint()
+      ..color = color
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = _grosor
+      ..strokeCap = StrokeCap.round
+      ..strokeJoin = StrokeJoin.round;
+
+    canvas.drawPath(trazo, pincel);
+  }
+
+  @override
+  bool shouldRepaint(_PintorRadical viejo) =>
+      viejo.color != color || viejo.anchoSigno != anchoSigno;
+}
 
 class _EstiloTecla {
   const _EstiloTecla(this.fondo, this.texto, this.tamano, this.negrita);
@@ -519,11 +754,15 @@ class _Tecla extends StatelessWidget {
     required this.etiqueta,
     required this.estilo,
     required this.alTocar,
+    this.contenido,
   });
 
   final String etiqueta;
   final _EstiloTecla estilo;
   final VoidCallback alTocar;
+
+  /// Si se da, se dibuja en lugar del texto (íconos con cajitas).
+  final Widget? contenido;
 
   @override
   Widget build(BuildContext context) {
@@ -541,14 +780,16 @@ class _Tecla extends StatelessWidget {
               padding: const EdgeInsets.symmetric(horizontal: 2),
               child: FittedBox(
                 fit: BoxFit.scaleDown,
-                child: Text(
-                  etiqueta,
-                  style: TextStyle(
-                    fontSize: estilo.tamano,
-                    color: estilo.texto,
-                    fontWeight: estilo.negrita ? FontWeight.bold : FontWeight.w500,
-                  ),
-                ),
+                child: contenido ??
+                    Text(
+                      etiqueta,
+                      style: TextStyle(
+                        fontSize: estilo.tamano,
+                        color: estilo.texto,
+                        fontWeight:
+                        estilo.negrita ? FontWeight.bold : FontWeight.w500,
+                      ),
+                    ),
               ),
             ),
           ),
@@ -606,3 +847,91 @@ class _VistaResultado extends StatelessWidget {
     );
   }
 }
+
+// ===========================================================================
+// Íconos de teclas (cajitas como en la Casio)
+// ===========================================================================
+
+Widget _caja(Color c, {double lado = 8}) => Container(
+  width: lado,
+  height: lado,
+  decoration: BoxDecoration(
+    border: Border.all(color: c, width: 1.3),
+    borderRadius: BorderRadius.circular(1.5),
+  ),
+);
+
+/// Cajita con la rayita de arriba del radical.
+Widget _radicando(Color c) => Container(
+  margin: const EdgeInsets.only(left: 1),
+  padding: const EdgeInsets.only(top: 2),
+  decoration: BoxDecoration(
+    border: Border(top: BorderSide(color: c, width: 1.3)),
+  ),
+  child: _caja(c),
+);
+
+Widget _iconoFraccion(Color c) => Column(
+  mainAxisSize: MainAxisSize.min,
+  children: [
+    _caja(c),
+    Container(
+      width: 16,
+      height: 1.4,
+      margin: const EdgeInsets.symmetric(vertical: 2),
+      color: c,
+    ),
+    _caja(c),
+  ],
+);
+
+Widget _iconoRaizCuadrada(Color c) => Row(
+  mainAxisSize: MainAxisSize.min,
+  crossAxisAlignment: CrossAxisAlignment.center,
+  children: [
+    Text('√', style: TextStyle(fontSize: 22, color: c)),
+    _radicando(c),
+  ],
+);
+
+Widget _iconoRaizN(Color c) => Row(
+  mainAxisSize: MainAxisSize.min,
+  crossAxisAlignment: CrossAxisAlignment.center,
+  children: [
+    Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: _caja(c, lado: 5),
+    ),
+    Text('√', style: TextStyle(fontSize: 22, color: c)),
+    _radicando(c),
+  ],
+);
+
+Widget _iconoPotencia(Color c) => Row(
+  mainAxisSize: MainAxisSize.min,
+  crossAxisAlignment: CrossAxisAlignment.start,
+  children: [
+    Text(
+      'x',
+      style: TextStyle(fontSize: 22, fontStyle: FontStyle.italic, color: c),
+    ),
+    Padding(
+      padding: const EdgeInsets.only(left: 1, top: 2),
+      child: _caja(c, lado: 7),
+    ),
+  ],
+);
+
+Widget _iconoLogBase(Color c) => Row(
+  mainAxisSize: MainAxisSize.min,
+  crossAxisAlignment: CrossAxisAlignment.center,
+  children: [
+    Text('log', style: TextStyle(fontSize: 16, color: c)),
+    Padding(
+      padding: const EdgeInsets.only(top: 9, left: 1),
+      child: _caja(c, lado: 5),
+    ),
+    const SizedBox(width: 2),
+    _caja(c),
+  ],
+);
